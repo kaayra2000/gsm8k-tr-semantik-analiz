@@ -53,7 +53,7 @@ df = pd.DataFrame({
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
 # Uygun bir dosya adı oluşturalım
-filename = os.path.join(current_dir, f"gsm8k_tr_1000_soru_cevap.csv")
+filename = os.path.join(current_dir, '..', f"gsm8k_tr_1000_soru_cevap.csv")
 
 # DataFrame'i CSV dosyasına kaydedelim
 df.to_csv(filename, index=False)
