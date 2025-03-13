@@ -1,2 +1,3 @@
-# gsm8k-tr-semantik-analiz
-Türkçe GSM8K veri kümesi üzerinde çeşitli embedding modelleri kullanarak soru-cevap çiftleri arasındaki anlamsal benzerlik analizi ve görselleştirme çalışması
+# GSM8K TR Semantik Benzerlik Analizi
+
+Bu depo, Hesaplamalı Anlambilim dersi kapsamında, Türkçe GSM8K veri kümesi üzerinde soru-cevap çiftleri arasındaki anlamsal benzerlik analizini içermektedir. Çalışmada, 1000 rastgele seçilmiş soru-cevap çifti üzerinde, MTEB liderlik tablosunda üst sıralarda yer alan çok dilli 5 farklı embedding modeli ve turkish-colbert modeli kullanılarak benzerlik ölçümleri gerçekleştirilmiştir. Proje, soru-cevap eşleşmelerinde top1 ve top5 başarı metriklerini hesaplamakta ve t-SNE ile 2 boyutlu görselleştirmeler sunmaktadır. Ayrıntılı bilgi için *tanım.pdf* dosyasına bakabilirsiniz.
