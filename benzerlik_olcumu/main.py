@@ -41,6 +41,21 @@ def get_index_from_dataset(content: str, target_column: str, dataset: pd.DataFra
     idx = dataset.index[dataset[target_column].apply(tr_to_lower) == content].tolist()[0]
     return idx if idx else -1
 
+def parse_result(result: Dict[str, Any], dataset: pd.DataFrame, target_column: str) -> Dict[str, Any]:
+    """
+    Sonucu formatlayan fonksiyon.
+    
+    Args:
+        result: Sonuç
+        dataset: Veri kümesi
+        target_column: Hedef kolon
+    """
+    del result['passage_id']
+    del result['document_id']
+    idx = get_index_from_dataset(result['content'], target_column, dataset)
+    result['idx'] = idx
+    return result
+
 def find_top5_similar(model: RAGPretrainedModel, text: str, target_column: str, dataset: pd.DataFrame) -> List[Tuple[int, float]]:
     """
     Verilen metne en benzeyen 5 kaydı döndüren fonksiyon.
@@ -63,9 +78,7 @@ def find_top5_similar(model: RAGPretrainedModel, text: str, target_column: str, 
     # Sonuçları işle
     top5_results = []
     for result in results:
-        content = result['content']
-        score = result.get('score', 0.0)
-        top5_results.append((get_index_from_dataset(content, target_column, dataset), score))
+        top5_results.append(parse_result(result, dataset, target_column))
     
     return top5_results
 
@@ -90,25 +103,7 @@ def index_model(model: RAGPretrainedModel, target_column: str, dataset: pd.DataF
     model.index(target_corpus, index_name=index_name)
     print("İndeksleme tamamlandı.")
 
-def format_top5_results(top5_results: List[Tuple[int, float]], dataset: pd.DataFrame, target_column: str) -> List[Dict[str, Any]]:
-    """
-    En benzer 5 sonucu formatlayan fonksiyon.
-    
-    Args:
-        top5_results: En benzer 5 sonucun listesi
-        dataset: Veri kümesi
-        target_column: Hedef kolon
-    """
-    top5_formatted = []
-    for rank, (similar_idx, score) in enumerate(top5_results, 1):
-        top5_formatted.append({
-            "rank": rank,
-            "content": dataset[target_column].iloc[similar_idx],
-            "score": float(score)
-        })
-    return top5_formatted
-
-def return_formatted_top5_to_results(source_column: str, source_content: str, target_column: str, top5_formatted: List[Dict[str, Any]]) -> Dict[str, Any]:
+def return_top5_to_results(source_column: str, source_content: str, target_column: str, top5_results: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
     En benzer 5 sonucu formatlayıp sonuçlara ekleyen fonksiyon.
     
@@ -122,7 +117,7 @@ def return_formatted_top5_to_results(source_column: str, source_content: str, ta
             "source_column": source_column,
             "source_content": source_content,
             "target_column": target_column,
-            "top5_similars": top5_formatted
+            "top5_similars": top5_results
         }
 
 def generate_similarity_json(model: RAGPretrainedModel, source_column: str, target_column: str, dataset: pd.DataFrame) -> Dict[int, Dict]:
@@ -153,12 +148,8 @@ def generate_similarity_json(model: RAGPretrainedModel, source_column: str, targ
         # En benzer 5 kaydı bul
         top5_results = find_top5_similar(model, source_content, target_column, dataset)
         
-        # Sonuçları formatla
-        top5_formatted = format_top5_results(top5_results, dataset, target_column)
-        
         # Bu öğe için sonuçları sakla
-        results[int(idx)] = return_formatted_top5_to_results(source_column, source_content, target_column, top5_formatted)
-    model.clear_index()
+        results[int(idx)] = return_top5_to_results(source_column, source_content, target_column, top5_results)
     return results
 
 def main():
