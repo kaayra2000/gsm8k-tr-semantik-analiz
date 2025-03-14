@@ -25,19 +25,21 @@ def generate_similarity_json(model: AutoModel, tokenizer: AutoTokenizer, source_
     
     for idx, row in dataset.iterrows():
         source_text = row[source_column]
-        top5_results = find_top5_similar(model, tokenizer, source_text, target_column, dataset)
+        top5_results, source_text_tsne_embedding = find_top5_similar(model, tokenizer, source_text, target_column, dataset)
         
         # sonuçları JSON formatına dönüştür
         result_dict[idx] = {
             "source_text": source_text,
             "real_target": row[target_column],
+            "top5_texts": [match_text for _, _, match_text, _ in top5_results],
+            "source_text_tsne_embedding": source_text_tsne_embedding.tolist(),
             "top5_matches": [
                 {
                     "index": match_idx,
                     "score": float(score),  # skoru float yap
                     "text": match_text,
-                    "embedding": embedding.tolist()
-                } for match_idx, score, match_text, embedding in top5_results
+                    "tsne_embedding": tsne_embedding.tolist()
+                } for match_idx, score, match_text, tsne_embedding in top5_results
             ]
         }
         

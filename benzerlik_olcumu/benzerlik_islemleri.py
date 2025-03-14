@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from transformers import AutoModel, AutoTokenizer
 
-from gomme_islemleri import get_token_embeddings
+from gomme_islemleri import get_token_embeddings, apply_tsne
 
 def get_cosine_similarity(embedding1: np.ndarray, embedding2: np.ndarray) -> float:
     """
@@ -37,7 +37,7 @@ def get_cosine_similarity(embedding1: np.ndarray, embedding2: np.ndarray) -> flo
     return float(similarity)
 
 def find_top5_similar(model: AutoModel, tokenizer: AutoTokenizer, text: str, 
-                     target_column: str, dataset: pd.DataFrame) -> List[Tuple[int, float, str, np.ndarray]]:
+                     target_column: str, dataset: pd.DataFrame) -> Tuple[List[Tuple[int, float, str, np.ndarray]], np.ndarray]:
     """
     Verilen metne en benzeyen 5 kaydı döndüren fonksiyon.
 
@@ -50,6 +50,7 @@ def find_top5_similar(model: AutoModel, tokenizer: AutoTokenizer, text: str,
 
     Returns:
         top5_results: En benzer 5 kaydın (indeks, skor, metin, gömme) listesi
+        tsne_source_embedding: Arama metninin token gömme matrisi
     """
     # Text'in token gömmesini al
     text_embedding = get_token_embeddings(model, tokenizer, text)
@@ -60,7 +61,7 @@ def find_top5_similar(model: AutoModel, tokenizer: AutoTokenizer, text: str,
         target_text = row[target_column]
         target_embedding = get_token_embeddings(model, tokenizer, target_text)
         similarity = get_cosine_similarity(text_embedding, target_embedding)
-        similarities.append((idx, similarity, target_text, target_embedding))
+        similarities.append((idx, similarity, target_text, apply_tsne(target_embedding)))
     
     # Benzerlik skoruna göre sırala (büyükten küçüğe)
     similarities.sort(key=lambda x: x[1], reverse=True)
@@ -71,4 +72,4 @@ def find_top5_similar(model: AutoModel, tokenizer: AutoTokenizer, text: str,
     # Sonuçları (indeks, skor, metin, gömme) formatında düzenle
     result = [(idx, score, text, embedding) for idx, score, text, embedding in top5_results]
     
-    return result
+    return result, apply_tsne(text_embedding)
