@@ -1,0 +1,2 @@
+# Ne yapar?
+`main.py` dosyası çalıştırıldığında kök dizindeki `gsm8k_tr_1000_soru_cevap.csv` dosyasının içindeki her bir soruya en yakın *5* cevabı ve her bir cevaba yakın *5* soruyu  *model_names* dizisindeki modeller vasıtasıyla bulur ve her birini bu dizindeki model isimlerine göre *json* dosyalarına kaydeder.

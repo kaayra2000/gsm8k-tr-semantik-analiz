@@ -69,8 +69,8 @@ def load_model(model_name: str) -> Tuple[AutoModel, AutoTokenizer]:
         tokenizer: Yüklenen tokenizer
     """
     print(f"Model yükleniyor: {model_name}")
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModel.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+    model = AutoModel.from_pretrained(model_name, trust_remote_code=True)
     print("Model yüklendi.")
     return model, tokenizer
 
