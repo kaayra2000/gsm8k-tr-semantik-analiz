@@ -1,7 +1,6 @@
 import pandas as pd
 from transformers import AutoModel, AutoTokenizer
 from typing import Dict
-
 from dosya_islemleri import save_smilarity_json, load_model, load_dataset
 from benzerlik_islemleri import find_top5_similar
 
@@ -25,29 +24,21 @@ def generate_similarity_json(model: AutoModel, tokenizer: AutoTokenizer, source_
     
     for idx, row in dataset.iterrows():
         source_text = row[source_column]
-        top5_results, source_text_tsne_embedding = find_top5_similar(model, tokenizer, source_text, target_column, dataset)
         
-        # sonuçları JSON formatına dönüştür
-        result_dict[idx] = {
-            "source_text": source_text,
-            "real_target": row[target_column],
-            "top5_texts": [match_text for _, _, match_text, _ in top5_results],
-            "source_text_tsne_embedding": source_text_tsne_embedding.tolist(),
-            "top5_matches": [
-                {
-                    "index": match_idx,
-                    "score": float(score),  # skoru float yap
-                    "text": match_text,
-                    "tsne_embedding": tsne_embedding.tolist()
-                } for match_idx, score, match_text, tsne_embedding in top5_results
-            ]
-        }
+        # Güncellenmiş find_top5_similar fonksiyonu artık doğrudan JSON formatında bir dict döndürür
+        similarity_result = {"source_text": source_text, "real_target": row[target_column]}
+        find5_res = find_top5_similar(model, tokenizer, source_text, target_column, dataset)
+        top5_texts = [res["text"] for res in find5_res["top5_matches"]]
+        similarity_result.update({"top5_texts": top5_texts})
+        similarity_result.update({"top5_matches": find5_res})
+        # Sonuçları düzenle
+        result_dict[idx] = similarity_result
         
         # her 10 elemanda bir yazdır
         if idx % 10 == 0:
             print(f"İşleniyor: {idx+1}/{len(dataset)}")
-    print("Tüm elemanlar işlendi.")
     
+    print("Tüm elemanlar işlendi.")
     return result_dict
 
 
@@ -59,9 +50,10 @@ def main():
         "intfloat/multilingual-e5-large-instruct",                  # 560M
         "ytu-ce-cosmos/turkish-colbert"
         ]
+    df = load_dataset()
+
     for model_name in model_names:
         save_prefix = model_name.replace("/", "_").replace("-", "_")
-        df = load_dataset()
         model, tokenizer = load_model(model_name)
         
         print("Generating question to answer similarity...")
