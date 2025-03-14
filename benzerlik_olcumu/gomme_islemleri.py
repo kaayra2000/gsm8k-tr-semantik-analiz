@@ -17,7 +17,7 @@ def get_token_embeddings(model: AutoModel, tokenizer: AutoTokenizer, text: str) 
         np.ndarray: Token gömmeleri matrisi (token_sayısı x gömme_boyutu)
     """
     # Metni tokenize et
-    inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=512, padding=True)
+    inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=4096, padding=True)
     
     with torch.no_grad():
         outputs = model(**inputs)
@@ -34,32 +34,43 @@ def get_token_embeddings(model: AutoModel, tokenizer: AutoTokenizer, text: str) 
     
     return token_embs  # Boyut: (token_sayısı x gömme_boyutu)
 
-def apply_tsne(embeddings, model_name, perplexity=30, n_iter=3000, random_state=42):
+def apply_tsne(token_embeddings: np.ndarray, perplexity: int = 5, max_iter: int = 1000, random_state: int = 42) -> np.ndarray:
     """
-    Gömmelere t-SNE uygulayarak 2 boyuta indirgeme
+    Token gömmelerini t-SNE ile 2 boyuta indirger.
     
     Args:
-        embeddings: Gömme matrisi
-        model_name: Model adı
-        perplexity: t-SNE perplexity değeri
-        n_iter: t-SNE iterasyon sayısı
-        random_state: t-SNE random state değeri
+        token_embeddings: Token gömmelerini içeren matris (token_sayısı x gömme_boyutu)
+        perplexity: t-SNE için perplexity parametresi
+        n_iter: t-SNE için iterasyon sayısı
+        random_state: Tekrarlanabilirlik için rastgele seed değeri
     
     Returns:
-        embeddings_2d: 2 boyutlu gömme matrisi
+        np.ndarray: 2 boyutlu t-SNE dönüşümü (token_sayısı x 2)
     """
-    # Embeddings veri tipini ve boyutunu kontrol et
-    embeddings = np.array(embeddings, dtype=np.float32)
-    print(f"Gömme boyutu: {embeddings.shape}")
+    # Token sayısını ve gömme boyutunu al
+    n_tokens, embedding_dim = token_embeddings.shape
     
-    # t-SNE uygula
-    print(f"{model_name} için t-SNE uygulanıyor...")
-    tsne = TSNE(n_components=2, 
-                perplexity=perplexity, 
-                n_iter=n_iter,
-                init='pca', 
-                learning_rate='auto',
-                random_state=random_state)
-    embeddings_2d = tsne.fit_transform(embeddings)
-
-    return embeddings_2d[:2]
+    # Eğer token sayısı çok azsa t-SNE için uygun perplexity değerini ayarla
+    if n_tokens < 10:
+        perplexity = min(perplexity, n_tokens - 1)
+        perplexity = max(2, perplexity)  # En az 2 olsun
+        print(f"Token sayısı az olduğundan perplexity değeri {perplexity} olarak ayarlandı.")
+    
+    # Eğer sadece bir token varsa t-SNE uygulanamaz
+    if n_tokens <= 1:
+        print("Tek token için t-SNE uygulanamıyor, rastgele bir nokta döndürülüyor.")
+        return np.random.rand(1, 2)
+    
+    # t-SNE modelini oluştur
+    tsne = TSNE(
+        n_components=2,         # 2 boyuta indirgeme
+        perplexity=perplexity,  # Perplexity değeri
+        max_iter=max_iter,          # İterasyon sayısı
+        learning_rate='auto',   # Otomatik öğrenme oranı
+        init='random',          # Rastgele başlangıç
+        random_state=random_state  # Tekrarlanabilirlik için seed
+    )
+    
+    # t-SNE'yi uygula
+    embeddings_2d = tsne.fit_transform(token_embeddings)
+    return embeddings_2d
