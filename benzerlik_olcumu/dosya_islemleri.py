@@ -27,6 +27,22 @@ def tr_to_lower(text: str) -> str:
     # Sonra normal küçültme işlemini yap
     return text.lower()
 
+def read_similarity_json(prefix: str, is_question_to_answer: bool) -> Dict:
+    """
+    JSON dosyasından benzerlik verisini okuyan fonksiyon.
+
+    Args:
+        prefix: Model adının yer aldığı dosya adı öneki
+        is_question_to_answer: Soru-cevap benzerliği mi yoksa cevap-soru benzerliği mi olduğu
+    
+    Returns:
+        Dict: Okunan JSON verisi
+    """
+    file_name = f"{prefix}_question_to_answer_similarity.json" if is_question_to_answer else f"{prefix}_answer_to_question_similarity.json"
+    with open(file_name, 'r') as f:
+        data = json.load(f)
+    return data
+
 def save_smilarity_json(data: Dict, prefix: str, is_question_to_answer: bool):
     """
     Verilen veriyi JSON formatında kaydeden fonksiyon.

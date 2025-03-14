@@ -52,19 +52,25 @@ def generate_similarity_json(model: AutoModel, tokenizer: AutoTokenizer, source_
 
 
 def main():
-    # Model adı
-    model_name = "ytu-ce-cosmos/turkish-colbert"
-    save_prefix = model_name.replace("/", "_").replace("-", "_")
-    df = load_dataset()
-    model, tokenizer = load_model(model_name)
-    
-    print("Generating question to answer similarity...")
-    q_to_a_similarity = generate_similarity_json(model, tokenizer, "question", "answer", df)
-    save_smilarity_json(q_to_a_similarity, save_prefix, is_question_to_answer=True)
-    
-    print("Generating answer to question similarity...")
-    a_to_q_similarity = generate_similarity_json(model, tokenizer, "answer", "question", df)
-    save_smilarity_json(a_to_q_similarity, save_prefix, is_question_to_answer=False)
+    model_names = [
+        "intfloat/multilingual-e5-small",                           # 118M
+        "HIT-TMG/KaLM-embedding-multilingual-mini-instruct-v1",     # 494M
+        "Alibaba-NLP/gte-multilingual-base",                        # 305M
+        "intfloat/multilingual-e5-large-instruct",                  # 560M
+        "ytu-ce-cosmos/turkish-colbert"
+        ]
+    for model_name in model_names:
+        save_prefix = model_name.replace("/", "_").replace("-", "_")
+        df = load_dataset()
+        model, tokenizer = load_model(model_name)
+        
+        print("Generating question to answer similarity...")
+        q_to_a_similarity = generate_similarity_json(model, tokenizer, "question", "answer", df)
+        save_smilarity_json(q_to_a_similarity, save_prefix, is_question_to_answer=True)
+        
+        print("Generating answer to question similarity...")
+        a_to_q_similarity = generate_similarity_json(model, tokenizer, "answer", "question", df)
+        save_smilarity_json(a_to_q_similarity, save_prefix, is_question_to_answer=False)
     
 
 if __name__ == "__main__":
