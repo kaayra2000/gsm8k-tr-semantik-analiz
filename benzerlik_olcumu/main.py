@@ -1,207 +1,69 @@
 import pandas as pd
-from typing import Any, Dict, List, Tuple
-import json
-import os
-from ragatouille import RAGPretrainedModel
+from transformers import AutoModel, AutoTokenizer
+from typing import Dict
 
-def tr_to_lower(text: str) -> str:
-    """
-    Verilen metni Türkçe karakterleri doğru şekilde koruyarak küçük harfe çeviren fonksiyon.
-    """
-    # Türkçe büyük karakterlerin küçük karşılıkları
-    tr_map = {
-        'İ': 'i',
-        'I': 'ı',
-        'Ğ': 'ğ',
-        'Ü': 'ü',
-        'Ö': 'ö',
-        'Ş': 'ş',
-        'Ç': 'ç'
-    }
-    
-    # Önce Türkçe karakterleri dönüştür
-    for upper, lower in tr_map.items():
-        text = text.replace(upper, lower)
-    
-    # Sonra normal küçültme işlemini yap
-    return text.lower()
+from dosya_islemleri import save_smilarity_json, load_model, load_dataset
+from benzerlik_islemleri import find_top5_similar
 
-def get_index_from_dataset(content: str, target_column: str, dataset: pd.DataFrame) -> int:
+
+def generate_similarity_json(model: AutoModel, tokenizer: AutoTokenizer, source_column: str,
+                            target_column: str, dataset: pd.DataFrame) -> Dict[int, Dict]:
     """
-    Verilen metnin veri kümesindeki indeksini döndüren fonksiyon.
+    Veri kümesindeki her kayıt için en benzer 5 kaydı bulan ve JSON formatında döndüren fonksiyon.
 
     Args:
-        content: Aranan metin
+        model: Hugging Face model
+        tokenizer: Hugging Face tokenizer
+        source_column: Kaynak kolon (arama yapılacak kolon)
         target_column: Hedef kolon (hangi kolonda arama yapılacağı)
         dataset: Veri kümesi
-    
+
     Returns:
-        Metnin veri kümesindeki indeksi
+        result_dict: JSON formatında sonuçlar
     """
-    idx = dataset.index[dataset[target_column].apply(tr_to_lower) == content].tolist()[0]
-    return idx if idx else -1
-
-def parse_result(result: Dict[str, Any], dataset: pd.DataFrame, target_column: str) -> Dict[str, Any]:
-    """
-    Sonucu formatlayan fonksiyon.
+    result_dict = {}
     
-    Args:
-        result: Sonuç
-        dataset: Veri kümesi
-        target_column: Hedef kolon
-    """
-    del result['passage_id']
-    del result['document_id']
-    idx = get_index_from_dataset(result['content'], target_column, dataset)
-    result['idx'] = idx
-    return result
-
-def find_top5_similar(model: RAGPretrainedModel, text: str, target_column: str, dataset: pd.DataFrame) -> List[Tuple[int, float]]:
-    """
-    Verilen metne en benzeyen 5 kaydı döndüren fonksiyon.
-    
-    Args:
-        model: RAGPretrainedModel 
-        text: Arama yapılacak metin
-        target_column: Hedef kolon (hangi kolonda arama yapılacağı)
-        dataset: Veri kümesi
-    
-    Returns:
-        En benzer 5 kaydın (indeks, skor) listesi
-    """
-    # Metni küçük harfe çevir
-    query = tr_to_lower(text)
-    
-    # Arama yap
-    results = model.search(query, k=5)
-    
-    # Sonuçları işle
-    top5_results = []
-    for result in results:
-        top5_results.append(parse_result(result, dataset, target_column))
-    
-    return top5_results
-
-def index_model(model: RAGPretrainedModel, target_column: str, dataset: pd.DataFrame) -> None:
-    """
-        Modeli verilen kolondaki metinlerle indeksleyen fonksiyon.
-
-        Args:
-            model: RAGPretrainedModel
-            target_column: Hedef kolon (indeksleme yapılacak kolon)
-            dataset: Veri kümesi
-    """        
-    # Metinleri küçük harfe çevir
-    print("Metinler küçük harfe dönüştürülüyor...")
-    target_corpus = [tr_to_lower(text) for text in dataset[target_column].tolist()]
-    
-    # Benzersiz indeks adı oluştur
-    index_name = f"{target_column}_index"
-    
-    # Hedef metinleri indeksle
-    print(f"{target_column} metinleri indeksleniyor... ({len(target_corpus)} adet)")
-    model.index(target_corpus, index_name=index_name)
-    print("İndeksleme tamamlandı.")
-
-def return_top5_to_results(source_column: str, source_content: str, target_column: str, top5_results: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """
-    En benzer 5 sonucu formatlayıp sonuçlara ekleyen fonksiyon.
-    
-    Args:
-        results: Sonuçlar
-        top5_results: En benzer 5 sonucun listesi
-        dataset: Veri kümesi
-        target_column: Hedef kolon
-    """
-    return {
-            "source_column": source_column,
-            "source_content": source_content,
-            "target_column": target_column,
-            "top5_similars": top5_results
-        }
-
-def generate_similarity_json(model: RAGPretrainedModel, source_column: str, target_column: str, dataset: pd.DataFrame) -> Dict[int, Dict]:
-    """
-    Bir kolondaki her eleman için diğer kolondaki en benzer 5 kaydı JSON formatında döndüren fonksiyon.
-    
-    Args:
-        model: RAGPretrainedModel
-        source_column: Kaynak kolon (içeriği sorgu olarak kullanılacak)
-        target_column: Hedef kolon (içinde benzerlikler aranacak)
-        dataset: Veri kümesi
-        
-    Returns:
-        Benzerlik sonuçlarını içeren sözlük
-    """
-    results = {}
-    
-    # Modeli indexle
-    index_model(model, target_column, dataset)
-    
-    
-    # Her kaynak öğesi için en benzer 5 hedef öğesini bul
     for idx, row in dataset.iterrows():
-        print(f"İşleniyor: {idx+1}/{len(dataset)}")
-        # bu metnin benzerleri bulunacak
-        source_content = row[source_column]
+        source_text = row[source_column]
+        top5_results = find_top5_similar(model, tokenizer, source_text, target_column, dataset)
         
-        # En benzer 5 kaydı bul
-        top5_results = find_top5_similar(model, source_content, target_column, dataset)
+        # sonuçları JSON formatına dönüştür
+        result_dict[idx] = {
+            "source_text": source_text,
+            "real_target": row[target_column],
+            "top5_matches": [
+                {
+                    "index": match_idx,
+                    "score": float(score),  # skoru float yap
+                    "text": match_text,
+                    "embedding": embedding.tolist()
+                } for match_idx, score, match_text, embedding in top5_results
+            ]
+        }
         
-        # Bu öğe için sonuçları sakla
-        results[int(idx)] = return_top5_to_results(source_column, source_content, target_column, top5_results)
-    return results
+        # her 10 elemanda bir yazdır
+        if idx % 10 == 0:
+            print(f"İşleniyor: {idx+1}/{len(dataset)}")
+    print("Tüm elemanlar işlendi.")
+    
+    return result_dict
+
 
 def main():
+    # Model adı
     model_name = "ytu-ce-cosmos/turkish-colbert"
+    save_prefix = model_name.replace("/", "_").replace("-", "_")
+    df = load_dataset()
+    model, tokenizer = load_model(model_name)
     
-    # Kod dosyasının bulunduğu dizini alalım
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-
-    # Veri kümesi yolu
-    dataset_path = os.path.join(current_dir, '..', "gsm8k_tr_1000_soru_cevap.csv")
+    print("Generating question to answer similarity...")
+    q_to_a_similarity = generate_similarity_json(model, tokenizer, "question", "answer", df)
+    save_smilarity_json(q_to_a_similarity, save_prefix, is_question_to_answer=True)
     
-    # Veri kümesini oku
-    print(f"Veri kümesi yükleniyor: {dataset_path}")
-    df = pd.read_csv(dataset_path)
-    df = df.head(10)  # Sadece ilk 10 örneği kullan
-    print(f"Veri kümesi yüklendi: {len(df)} kayıt")
-
-    print(f"\nModel yükleniyor: {model_name}")
+    print("Generating answer to question similarity...")
+    a_to_q_similarity = generate_similarity_json(model, tokenizer, "answer", "question", df)
+    save_smilarity_json(a_to_q_similarity, save_prefix, is_question_to_answer=False)
     
-    # Model adını dosya adında kullanmak için düzenle
-    model_filename = model_name.replace('/', '_').replace('-', '_')
-    
-    try:
-        # Modeli yükle
-        model = RAGPretrainedModel.from_pretrained(model_name)
-        print(f"Model başarıyla yüklendi: {model_name}")
-        
-        # Soru-Cevap benzerlikleri hesaplanıyor
-        print(f"Soru benzerlikleri hesaplanıyor...")
-        similarity_results_path = os.path.join(current_dir, f'similarity_results_{model_filename}.json')
-        question_results = generate_similarity_json(model, "question", "answer", df)
-        
-        # Sonuçları kaydet
-        print(f"Sonuçlar kaydediliyor: {similarity_results_path}")
-        with open(similarity_results_path, 'w', encoding='utf-8') as f:
-            json.dump(question_results, f, ensure_ascii=False, indent=4)
-        
-        print(f"İşlem tamamlandı: {similarity_results_path}")
-        
-        # Cevap-Soru benzerlikleri hesaplanıyor
-        answer_results_path = os.path.join(current_dir, f'similarity_results_answers_{model_filename}.json')
-        print(f"Cevap benzerlikleri hesaplanıyor...")
-        answer_results = generate_similarity_json(model, "answer", "question", df)
-        
-        # Sonuçları kaydet
-        with open(answer_results_path, 'w', encoding='utf-8') as f:
-            json.dump(answer_results, f, ensure_ascii=False, indent=4)
-            
-        print(f"İşlem tamamlandı: {answer_results_path}")
-        
-    except Exception as e:
-        print(f"Hata oluştu - {model_name}: {str(e)}")
 
 if __name__ == "__main__":
     main()
