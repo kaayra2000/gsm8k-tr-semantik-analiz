@@ -3,32 +3,36 @@ import numpy as np
 from transformers import AutoModel, AutoTokenizer
 from sklearn.manifold import TSNE
 
-def get_sentence_embedding(model: AutoModel, tokenizer: AutoTokenizer, text: str) -> np.ndarray:
+def get_token_embeddings(model: AutoModel, tokenizer: AutoTokenizer, text: str) -> np.ndarray:
     """
-    Verilen metnin gömüsünü döndüren fonksiyon.
-
+    Verilen metnin token gömmelerini matris olarak döndüren fonksiyon.
+    Her satır bir tokene, her sütun bir gömme boyutuna karşılık gelir.
+    
     Args:
         model: Hugging Face model
         tokenizer: Hugging Face tokenizer
         text: Gömüsü alınacak metin
-
+    
     Returns:
-        embedding: Metnin gömüsü
+        np.ndarray: Token gömmeleri matrisi (token_sayısı x gömme_boyutu)
     """
-    # metni tokenize et
+    # Metni tokenize et
     inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=512, padding=True)
+    
     with torch.no_grad():
         outputs = model(**inputs)
     
-    # Gömüyü oluştur
-    attention_mask = inputs['attention_mask']
+    # Token gömmelerini al
     token_embeddings = outputs.last_hidden_state
-    input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
-    sum_embeddings = torch.sum(token_embeddings * input_mask_expanded, 1)
-    sum_mask = torch.clamp(input_mask_expanded.sum(1), min=1e-9)
-    embedding = (sum_embeddings / sum_mask).squeeze().numpy()
     
-    return embedding
+    # Attention mask kullanarak sadece gerçek token gömmelerini al (padding tokenlarını çıkar)
+    attention_mask = inputs['attention_mask'][0]
+    valid_tokens = attention_mask.bool()
+    
+    # Sadece gerçek tokenlerin gömmelerini seç
+    token_embs = token_embeddings[0, valid_tokens].detach().cpu().numpy()
+    
+    return token_embs  # Boyut: (token_sayısı x gömme_boyutu)
 
 def apply_tsne(embeddings, model_name, perplexity=30, n_iter=3000, random_state=42):
     """

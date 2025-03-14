@@ -5,27 +5,39 @@ import numpy as np
 import pandas as pd
 from transformers import AutoModel, AutoTokenizer
 
-from gomme_islemleri import get_sentence_embedding
+from gomme_islemleri import get_token_embeddings
 
 def get_cosine_similarity(embedding1: np.ndarray, embedding2: np.ndarray) -> float:
     """
-    İki gömme arasındaki kosinüs benzerliğini hesaplayan fonksiyon.
-
+    İki token matrisi arasındaki benzerliği hesaplar.
+    Her token için diğer metindeki en benzer tokeni bulur ve
+    bu benzerliklerin ortalamasını döndürür.
+    
     Args:
-        embedding1: İlk gömme
-        embedding2: İkinci gömme
-
+        embedding1: Birinci metin token matris gömmesi
+        embedding2: İkinci metin token matris gömmesi
+    
     Returns:
-        similarity: Kosinüs benzerliği skoru
+        float: Benzerlik skoru (0-1 aralığında)
     """
-    # sklearn'in cosine_similarity fonksiyonu için gömme şeklini yeniden şekillendir
-    emb1 = embedding1.reshape(1, -1)
-    emb2 = embedding2.reshape(1, -1)
-    similarity = cosine_similarity(emb1, emb2)[0][0]
-    return similarity
+    # Her iki matrisin ortalama vektörünü al
+    emb1_mean = np.mean(embedding1, axis=0, keepdims=True)  # 1 x gömme_boyutu
+    emb2_mean = np.mean(embedding2, axis=0, keepdims=True)  # 1 x gömme_boyutu
+    
+    # Ortalama vektörler arasındaki kosinüs benzerliğini hesapla
+    dot_product = np.sum(emb1_mean * emb2_mean)
+    norm1 = np.sqrt(np.sum(emb1_mean ** 2))
+    norm2 = np.sqrt(np.sum(emb2_mean ** 2))
+    
+    # Sıfıra bölmeyi önle
+    if norm1 * norm2 == 0:
+        return 0
+        
+    similarity = dot_product / (norm1 * norm2)
+    return float(similarity)
 
 def find_top5_similar(model: AutoModel, tokenizer: AutoTokenizer, text: str, 
-                      target_column: str, dataset: pd.DataFrame) -> List[Tuple[int, float, str, np.ndarray]]:
+                     target_column: str, dataset: pd.DataFrame) -> List[Tuple[int, float, str, np.ndarray]]:
     """
     Verilen metne en benzeyen 5 kaydı döndüren fonksiyon.
 
@@ -39,24 +51,24 @@ def find_top5_similar(model: AutoModel, tokenizer: AutoTokenizer, text: str,
     Returns:
         top5_results: En benzer 5 kaydın (indeks, skor, metin, gömme) listesi
     """
-    # Min-heap yapısı kullanarak en yüksek 5 benzerliği tut
-    top5 = []
-    text_embedding = get_sentence_embedding(model, tokenizer, text)
+    # Text'in token gömmesini al
+    text_embedding = get_token_embeddings(model, tokenizer, text)
     
+    # Tüm veri kümesini dolaş ve benzerlik skorlarını hesapla
+    similarities = []
     for idx, row in dataset.iterrows():
         target_text = row[target_column]
-        target_embedding = get_sentence_embedding(model, tokenizer, target_text)
+        target_embedding = get_token_embeddings(model, tokenizer, target_text)
         similarity = get_cosine_similarity(text_embedding, target_embedding)
-        
-        # eğer heap boşsa veya 5'ten az eleman varsa ekle
-        if len(top5) < 5:
-            heapq.heappush(top5, (similarity, idx, target_text, target_embedding))
-        # eğer benzerlik en yüksek 5'ten küçükse ekle
-        elif similarity > top5[0][0]:
-            heapq.heappushpop(top5, (similarity, idx, target_text, target_embedding))
+        similarities.append((idx, similarity, target_text, target_embedding))
     
-    # En yüksek benzerliklerin sırasını tersine çevir
-    top5.sort(reverse=True)
-    result = [(idx, score, text, embedding) for score, idx, text, embedding in top5]
+    # Benzerlik skoruna göre sırala (büyükten küçüğe)
+    similarities.sort(key=lambda x: x[1], reverse=True)
+    
+    # İlk 5 sonucu al
+    top5_results = similarities[:5]
+    
+    # Sonuçları (indeks, skor, metin, gömme) formatında düzenle
+    result = [(idx, score, text, embedding) for idx, score, text, embedding in top5_results]
     
     return result
