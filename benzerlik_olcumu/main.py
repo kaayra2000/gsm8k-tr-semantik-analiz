@@ -1,9 +1,10 @@
 import pandas as pd
 from transformers import AutoModel, AutoTokenizer
 from typing import Dict
-from dosya_islemleri import save_smilarity_json, load_model, load_dataset, save_top1_top5_results_json
+from dosya_islemleri import save_smilarity_json, load_model, load_dataset, save_top1_top5_results_json, get_all_top1_top5_results
 from benzerlik_islemleri import find_top5_similar
 from basari_hesapla import evaluate_similarity_results_top1_top5
+from gorsellestir import visualize_top1_top5_scores, plot_two_tsne_results
 
 
 def generate_similarity_json(model: AutoModel, tokenizer: AutoTokenizer, source_column: str,
@@ -45,6 +46,7 @@ def generate_similarity_json(model: AutoModel, tokenizer: AutoTokenizer, source_
 
 def main():
     model_names = [
+        "ibm-granite/granite-embedding-107m-multilingual",              # 107M
         "intfloat/multilingual-e5-small",                               # 118M
         "HIT-TMG/KaLM-embedding-multilingual-mini-instruct-v1",         # 494M
         "Alibaba-NLP/gte-multilingual-base",                            # 305M
@@ -52,25 +54,35 @@ def main():
         "ytu-ce-cosmos/turkish-colbert"
         ]
     df = load_dataset()
-    top1_top5_results = []
     for model_name in model_names:
         save_prefix = model_name.replace("/", "_").replace("-", "_")
         model, tokenizer = load_model(model_name)
         
-        print("Generating question to answer similarity...")
-        q_to_a_similarity = generate_similarity_json(model, tokenizer, "question", "answer", df)
-        save_smilarity_json(q_to_a_similarity, save_prefix, is_question_to_answer=True)
-        q_to_a_similarity_eval_results = evaluate_similarity_results_top1_top5(q_to_a_similarity, model_name, is_question_to_answer=True)
-        save_top1_top5_results_json(q_to_a_similarity_eval_results, save_prefix, is_question_to_answer=True)
-        top1_top5_results.append(q_to_a_similarity_eval_results)
-        
-        print("Generating answer to question similarity...")
-        a_to_q_similarity = generate_similarity_json(model, tokenizer, "answer", "question", df)
-        save_smilarity_json(a_to_q_similarity, save_prefix, is_question_to_answer=False)
-        a_to_q_similarity_eval_results = evaluate_similarity_results_top1_top5(a_to_q_similarity, model_name, is_question_to_answer=False)
-        save_top1_top5_results_json(a_to_q_similarity_eval_results, save_prefix, is_question_to_answer=False)
-        top1_top5_results.append(a_to_q_similarity_eval_results)
-
+        for source, target in [("answer", "question"), ("question", "answer")]:
+            is_question_to_answer = source == "question" and target == "answer"
+            direction_name = f"{source}_to_{target}"
+            
+            print(f"{direction_name} benzerliği oluşturuluyor...")
+            
+            # Benzerlik sonuçlarını oluştur
+            similarity_results = generate_similarity_json(model, tokenizer, source, target, df)
+            
+            # Benzerlik JSON'larını kaydet
+            save_smilarity_json(similarity_results, save_prefix, is_question_to_answer=is_question_to_answer)
+            
+            # Top1 ve Top5 sonuçlarını değerlendir
+            eval_results = evaluate_similarity_results_top1_top5(similarity_results, model_name, is_question_to_answer=is_question_to_answer)
+            
+            # Değerlendirme sonuçlarını kaydet
+            save_top1_top5_results_json(eval_results, save_prefix, is_question_to_answer=is_question_to_answer)
+            
+            # t-SNE görselleştirmelerini oluştur ve kaydet
+            plot_two_tsne_results(
+                similarity_results[0]["source_text_tsne_embedding"], 
+                similarity_results[0]["top5_matches"][0]["tsne_embedding"],
+                file_name=f"tsne_{save_prefix}_{direction_name}.png"
+            )
+    visualize_top1_top5_scores(get_all_top1_top5_results())
 
     
 

@@ -1,10 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
-
+import os
+from typing import List, Dict
 def plot_two_tsne_results(tsne_result1, tsne_result2, 
                          label1="Kaynak Metin", label2="Modelin Benzer Bulduğu Metin",
                          color1="blue", color2="red",
-                         figsize=(18, 8), save_path=None):
+                         figsize=(18, 8), file_name=None):
     """
     İki farklı t-SNE sonucunu yan yana ayrı grafiklerde çizdirir.
     
@@ -18,6 +19,9 @@ def plot_two_tsne_results(tsne_result1, tsne_result2,
         figsize: Figür boyutu (genişlik, yükseklik)
         save_path: Grafiğin kaydedileceği dosya yolu
     """
+    # Liste tipindeki verileri NumPy dizisine dönüştür
+    tsne_result1 = np.array(tsne_result1)
+    tsne_result2 = np.array(tsne_result2)
     # Figürü ve alt grafikleri oluştur
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=figsize)
     title=f"{label1} ve {label2} Gömmelerinin t-SNE Görselleştirmesi",
@@ -61,7 +65,105 @@ def plot_two_tsne_results(tsne_result1, tsne_result2,
     # Grafiği düzenle ve kaydet
     plt.tight_layout()
     
-    if save_path:
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    if file_name:
+        file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "similarity_results", "gorseller", file_name)
+        if not os.path.exists(os.path.dirname(file_path)):
+            os.makedirs(os.path.dirname(file_path))
+        plt.savefig(file_path, dpi=300, bbox_inches='tight')
     
     return plt
+
+def visualize_top1_top5_scores(results_list: List) -> None:
+    """
+    Model sonuçlarını içeren sözlük listesini alıp top1 ve top5 skorlarını 
+    görselleştirerek kaydeden fonksiyon.
+    
+    Args:
+        results_list: Model sonuçlarını içeren sözlük listesi
+    """
+    # Sonuçları result_type'a göre grupla
+    question_to_answer = []
+    answer_to_question = []
+    
+    for result in results_list:
+        if result["result_type"] == "question_to_answer":
+            question_to_answer.append(result)
+        elif result["result_type"] == "answer_to_question":
+            answer_to_question.append(result)
+    
+    # Çıktı dizinini oluştur
+    top1_top5_results_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "top1_top5_results", "gorseller")
+    os.makedirs(top1_top5_results_dir, exist_ok=True)
+    
+    # Soru Cevap Görselleştirmesi
+    if question_to_answer:
+        plot_t1_t5_scores(question_to_answer, 
+                   os.path.join(top1_top5_results_dir, "top1_top5_results_question_to_answer.png"),
+                   "Cevahtan Soru Bulma Performansı")
+    
+    # Cevap Soru Görselleştirmesi
+    if answer_to_question:
+        plot_t1_t5_scores(answer_to_question, 
+                   os.path.join(top1_top5_results_dir, "top1_top5_results_answer_to_question.png"),
+                   "Sorudan Cevap Bulma Performansı")
+
+def plot_t1_t5_scores(results: List[Dict], output_path: str, title: str, top1_color='royalblue', top5_color='lightcoral'):
+    """
+    Belirli bir result_type için skorları görselleştiren ve kaydeden yardımcı fonksiyon.
+    
+    Args:
+        results: Skor sonuçlarını içeren liste
+        output_path: Dosya kaydetme yolu
+        title: Grafik başlığı
+        top1_color: Top-1 skorlar için renk
+        top5_color: Top-5 skorlar için renk
+    """
+    # Model isimlerini ve skorları çıkar
+    models = []
+    top1_scores = []
+    top5_scores = []
+    
+    for result in results:
+        # Uzun model isimlerini kısalt
+        model_name = result["model_name"].split('/')[-1] if '/' in result["model_name"] else result["model_name"]
+        models.append(model_name)
+        top1_scores.append(result["top1_score"]["accuracy"] * 100)  # Yüzde olarak göster
+        top5_scores.append(result["top5_score"]["accuracy"] * 100)  # Yüzde olarak göster
+    
+    # Grafik boyutunu ayarla
+    plt.figure(figsize=(12, 6))
+    
+    # Bar chart konumlarını ayarla
+    bar_width = 0.35
+    x = np.arange(len(models))
+    
+    # Bar chartları çiz
+    bars1 = plt.bar(x - bar_width/2, top1_scores, bar_width, label='Top-1', color=top1_color)
+    bars2 = plt.bar(x + bar_width/2, top5_scores, bar_width, label='Top-5', color=top5_color)
+    
+    # Grafik özelliklerini ayarla
+    plt.xlabel('Modeller')
+    plt.ylabel('Doğruluk (%)')
+    plt.title(title)
+    plt.xticks(x, models, rotation=20, ha='right')
+    plt.ylim(0, 110)  # Skor yüzde olduğu için 0-100 arası + biraz boşluk
+    
+    # Bar üstlerinde değerleri göster
+    def add_labels(bars):
+        for bar in bars:
+            height = bar.get_height()
+            plt.text(bar.get_x() + bar.get_width()/2., height + 1,
+                    f'{height:.1f}%', ha='center', va='bottom')
+    
+    add_labels(bars1)
+    add_labels(bars2)
+    
+    plt.legend(loc='upper right', bbox_to_anchor=(1.05, 1.05), framealpha=0.9, 
+               edgecolor='lightgray', fancybox=True)
+    plt.tight_layout()
+    
+    # Grafiği kaydet
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.close()
+    
+    print(f"Görsel kaydedildi: {output_path}")

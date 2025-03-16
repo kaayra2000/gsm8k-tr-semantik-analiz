@@ -1,4 +1,4 @@
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 import json
 import os
 import pandas as pd
@@ -66,6 +66,20 @@ def save_top1_top5_results_json(data: Dict, prefix: str, is_question_to_answer: 
     file_path = os.path.join(top1_top5_results_dir, file_name)
     with open(file_path, 'w') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
+def get_all_top1_top5_results() -> List[Dict]:
+    """
+    Tüm top1 ve top5 sonuçlarını okuyan fonksiyon.
+    
+    Returns:
+        Dict: Okunan JSON verisi
+    """
+    all_results = []
+    for file_name in os.listdir(top1_top5_results_dir):
+        if file_name.endswith(".json"):
+            with open(os.path.join(top1_top5_results_dir, file_name), 'r') as f:
+                data = json.load(f)
+                all_results.append(data)
+    return all_results
 def read_top1_top5_results_json(prefix: str, is_question_to_answer: bool) -> Dict:
     """
     JSON dosyasından top1 ve top5 sonuçlarını okuyan fonksiyon.
