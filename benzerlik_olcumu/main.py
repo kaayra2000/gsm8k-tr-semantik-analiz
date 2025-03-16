@@ -76,7 +76,7 @@ def main():
             # Değerlendirme sonuçlarını kaydet
             save_top1_top5_results_json(eval_results, save_prefix, is_question_to_answer=is_question_to_answer)
             
-            # t-SNE görselleştirmelerini oluştur ve kaydet
+            # t-SNE görselleştirmelerini oluştur ve kaydet (sadece ilk sonuç için deneme amaçlı)
             plot_two_tsne_results(
                 similarity_results[0]["source_text_tsne_embedding"], 
                 similarity_results[0]["top5_matches"][0]["tsne_embedding"],
