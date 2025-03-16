@@ -46,11 +46,11 @@ def generate_similarity_json(model: AutoModel, tokenizer: AutoTokenizer, source_
 
 def main():
     model_names = [
-        "ibm-granite/granite-embedding-107m-multilingual",              # 107M
-        "intfloat/multilingual-e5-small",                               # 118M
-        "HIT-TMG/KaLM-embedding-multilingual-mini-instruct-v1",         # 494M
-        "Alibaba-NLP/gte-multilingual-base",                            # 305M
-        "intfloat/multilingual-e5-large-instruct",                      # 560M
+        "intfloat/multilingual-e5-base",                                # 278M  - 81
+        "ibm-granite/granite-embedding-107m-multilingual",              # 107M  - 48
+        "intfloat/multilingual-e5-small",                               # 118M  - 36
+        "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",  # 118M  - 62
+        "shibing624/text2vec-base-multilingual",                        # 118M  - 77 
         "ytu-ce-cosmos/turkish-colbert"
         ]
     df = load_dataset()

@@ -13,11 +13,11 @@ Bu proje, Türkçe soru-cevap çiftleri arasındaki semantik benzerliği farklı
 
 Varsayılan olarak aşağıdaki modeller kullanılmıştır:
 
-1. `ibm-granite/granite-embedding-107m-multilingual` (107M parametre)
+1. `intfloat/multilingual-e5-base` (278M parametre)
 2. `intfloat/multilingual-e5-small` (118M parametre)
-3. `HIT-TMG/KaLM-embedding-multilingual-mini-instruct-v1` (494M parametre)
-4. `Alibaba-NLP/gte-multilingual-base` (305M parametre)
-5. `intfloat/multilingual-e5-large-instruct` (560M parametre)
+3. `ibm-granite/granite-embedding-107m-multilingual` (107M parametre)
+4. `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` (118M parametre)
+5. `shibing624/text2vec-base-multilingual` (118M parametre)
 6. `ytu-ce-cosmos/turkish-colbert`
 
 Eğer farklı modeller kullanmak isterseniz, `main.py` dosyasındaki `model_names` değişkenini güncelleyebilirsiniz.
