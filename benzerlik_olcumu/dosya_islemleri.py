@@ -186,4 +186,5 @@ def load_dataset() -> pd.DataFrame:
     # tüm karakterleri küçült
     df['question'] = df['question'].apply(tr_to_lower)
     df['answer'] = df['answer'].apply(tr_to_lower)
+    df = df.head(20)  # Sadece ilk 10 örneği kullan
     return df
