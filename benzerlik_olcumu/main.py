@@ -1,8 +1,9 @@
 import pandas as pd
 from transformers import AutoModel, AutoTokenizer
 from typing import Dict
-from dosya_islemleri import save_smilarity_json, load_model, load_dataset
+from dosya_islemleri import save_smilarity_json, load_model, load_dataset, save_top1_top5_results_json
 from benzerlik_islemleri import find_top5_similar
+from basari_hesapla import evaluate_similarity_results_top1_top5
 
 
 def generate_similarity_json(model: AutoModel, tokenizer: AutoTokenizer, source_column: str,
@@ -30,7 +31,7 @@ def generate_similarity_json(model: AutoModel, tokenizer: AutoTokenizer, source_
         find5_res = find_top5_similar(model, tokenizer, source_text, target_column, dataset)
         top5_texts = [res["text"] for res in find5_res["top5_matches"]]
         similarity_result.update({"top5_texts": top5_texts})
-        similarity_result.update({"top5_matches": find5_res})
+        similarity_result.update(find5_res)
         # Sonuçları düzenle
         result_dict[idx] = similarity_result
         
@@ -44,14 +45,14 @@ def generate_similarity_json(model: AutoModel, tokenizer: AutoTokenizer, source_
 
 def main():
     model_names = [
-        "intfloat/multilingual-e5-small",                           # 118M
-        "HIT-TMG/KaLM-embedding-multilingual-mini-instruct-v1",     # 494M
-        "Alibaba-NLP/gte-multilingual-base",                        # 305M
-        "intfloat/multilingual-e5-large-instruct",                  # 560M
+        "intfloat/multilingual-e5-small",                               # 118M
+        "HIT-TMG/KaLM-embedding-multilingual-mini-instruct-v1",         # 494M
+        "Alibaba-NLP/gte-multilingual-base",                            # 305M
+        "intfloat/multilingual-e5-large-instruct",                      # 560M
         "ytu-ce-cosmos/turkish-colbert"
         ]
     df = load_dataset()
-
+    top1_top5_results = []
     for model_name in model_names:
         save_prefix = model_name.replace("/", "_").replace("-", "_")
         model, tokenizer = load_model(model_name)
@@ -59,10 +60,18 @@ def main():
         print("Generating question to answer similarity...")
         q_to_a_similarity = generate_similarity_json(model, tokenizer, "question", "answer", df)
         save_smilarity_json(q_to_a_similarity, save_prefix, is_question_to_answer=True)
+        q_to_a_similarity_eval_results = evaluate_similarity_results_top1_top5(q_to_a_similarity, model_name, is_question_to_answer=True)
+        save_top1_top5_results_json(q_to_a_similarity_eval_results, save_prefix, is_question_to_answer=True)
+        top1_top5_results.append(q_to_a_similarity_eval_results)
         
         print("Generating answer to question similarity...")
         a_to_q_similarity = generate_similarity_json(model, tokenizer, "answer", "question", df)
         save_smilarity_json(a_to_q_similarity, save_prefix, is_question_to_answer=False)
+        a_to_q_similarity_eval_results = evaluate_similarity_results_top1_top5(a_to_q_similarity, model_name, is_question_to_answer=False)
+        save_top1_top5_results_json(a_to_q_similarity_eval_results, save_prefix, is_question_to_answer=False)
+        top1_top5_results.append(a_to_q_similarity_eval_results)
+
+
     
 
 if __name__ == "__main__":

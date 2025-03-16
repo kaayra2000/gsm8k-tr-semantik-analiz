@@ -34,8 +34,7 @@ def get_token_embeddings(model: AutoModel, tokenizer: AutoTokenizer, text: str) 
     
     return token_embs  # Boyut: (token_sayısı x gömme_boyutu)
 
-def apply_tsne(token_embeddings: np.ndarray, perplexity: int = 5, max_iter: int = 1000, random_state: int = 42,
-               counter=[0]) -> np.ndarray:
+def apply_tsne(token_embeddings: np.ndarray, perplexity: int = 5, max_iter: int = 1000, random_state: int = 42) -> np.ndarray:
     """
     Token gömmelerini t-SNE ile 2 boyuta indirger.
     
@@ -55,9 +54,6 @@ def apply_tsne(token_embeddings: np.ndarray, perplexity: int = 5, max_iter: int 
     if n_tokens < 10:
         perplexity = min(perplexity, n_tokens - 1)
         perplexity = max(2, perplexity)  # En az 2 olsun
-        if counter[0] == 0:
-            print(f"Token sayısı çok az ({n_tokens}), perplexity değeri {perplexity} olarak ayarlandı.")
-            counter[0] += 1
     
     # Eğer sadece bir token varsa t-SNE uygulanamaz
     if n_tokens <= 1:
