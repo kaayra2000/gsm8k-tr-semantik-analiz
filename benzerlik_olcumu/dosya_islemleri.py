@@ -1,12 +1,15 @@
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, TYPE_CHECKING
 import json
 import os
 import pandas as pd
 from transformers import AutoModel, AutoTokenizer
+if TYPE_CHECKING:
+    import numpy as np
 
-similarity_results_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "similarity_results")
-top1_top5_results_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "top1_top5_results")
-
+file_dir = os.path.dirname(os.path.abspath(__file__))
+similarity_results_dir = os.path.join(file_dir, "similarity_results")
+top1_top5_results_dir = os.path.join(file_dir, "top1_top5_results")
+embeddings_dir = os.path.join(file_dir, "embeddings")
 def tr_to_lower(text: str) -> str:
     """
     Verilen metni Türkçe karakterleri doğru şekilde koruyarak küçük harfe çeviren fonksiyon.
@@ -148,12 +151,13 @@ def save_smilarity_json(data: Dict, prefix: str, is_question_to_answer: bool):
          json.dump(data, f, ensure_ascii=False, indent=4)
 
 
-def load_model(model_name: str) -> Tuple[AutoModel, AutoTokenizer]:
+def load_model(model_name: str, device_type: str = "cuda") -> Tuple[AutoModel, AutoTokenizer]:
     """
     Hugging Face model ve tokenizer yükleyen fonksiyon.
 
     Args:
         model_name: Hugging Face model adı
+        device_type: Kullanılacak cihaz (cuda ya da cpu)
 
     Returns:
         model: Yüklenen model
@@ -161,8 +165,8 @@ def load_model(model_name: str) -> Tuple[AutoModel, AutoTokenizer]:
     """
     print(f"Model yükleniyor: {model_name}")
     tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
-    model = AutoModel.from_pretrained(model_name, trust_remote_code=True)
-    print("Model yüklendi.")
+    model = AutoModel.from_pretrained(model_name, trust_remote_code=True).to(device_type)
+    print(f"Model yüklendi. {model_name}")
     return model, tokenizer
 
 
@@ -186,5 +190,64 @@ def load_dataset() -> pd.DataFrame:
     # tüm karakterleri küçült
     df['question'] = df['question'].apply(tr_to_lower)
     df['answer'] = df['answer'].apply(tr_to_lower)
-    df = df.head(20)  # Sadece ilk 10 örneği kullan
     return df
+
+def get_embeddings_path(save_prefix: str) -> str:
+    """
+    Gömme vektörlerinin kaydedileceği dosya yolunu döndüren fonksiyon.
+
+    Args:
+        save_prefix: Kaydedilecek dosya adının öneki
+
+    Returns:
+        str: Gömme vektörlerinin kaydedileceği dosya yolu
+    """
+    return os.path.join(embeddings_dir, f"{save_prefix}_embeddings.json")
+
+def get_calculated_embeddings_size(save_prefix: str) -> int:
+    """
+    save_prefix'e göre kaydedilen gömme vektörlerinin sayısını döndüren fonksiyon.
+
+    Args:
+        save_prefix: Kaydedilecek dosya adının öneki
+
+    Returns:
+        int: dosyada şimdiye kadar kaç gömme vektörü kaydedildiği
+    """
+    file_path = get_embeddings_path(save_prefix)
+    if not os.path.exists(file_path):
+        return 0
+    return sum(1 for line in open(file_path))
+
+def append_embedding(save_prefix: str, embedding, item: pd.Series):
+    """
+    Bir gömme vektörünü ve ilgili veriyi JSON formatında dosyaya ekleyen fonksiyon.
+    Her bir gömme yeni bir satırda kaydedilir.
+    
+    Args:
+        save_prefix: Kaydedilecek dosya adının öneki
+        embedding: Eklenecek gömme vektörü
+        item: Kaydedilecek pandas Series nesnesi (soru ve cevap içeren)
+    """
+    import json
+    
+    # Create directory if it doesn't exist
+    if not os.path.exists(embeddings_dir):
+        os.makedirs(embeddings_dir)
+        
+    # Get the file path with json extension
+    json_path = get_embeddings_path(save_prefix)
+    
+    # Create a JSON object with question, answer and embedding
+    json_object = {
+        "question": item["question"],
+        "answer": item["answer"],
+        "embedding": embedding.tolist() if hasattr(embedding, 'tolist') else list(embedding)
+    }
+    
+    # Open file and append the new entry
+    file_exists = os.path.exists(json_path) and os.path.getsize(json_path) > 0
+    with open(json_path, 'a' if file_exists else 'w', encoding='utf-8') as f:
+        # Write the JSON object and a comma on a single line
+        f.write(json.dumps(json_object, ensure_ascii=False))
+        f.write(',\n')

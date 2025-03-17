@@ -2,46 +2,9 @@ import pandas as pd
 from transformers import AutoModel, AutoTokenizer
 from typing import Dict
 from dosya_islemleri import save_smilarity_json, load_model, load_dataset, save_top1_top5_results_json, get_all_top1_top5_results
-from benzerlik_islemleri import find_top5_similar
+from benzerlik_islemleri import generate_similarity_json
 from basari_hesapla import evaluate_similarity_results_top1_top5
 from gorsellestir import visualize_top1_top5_scores, plot_two_tsne_results
-
-
-def generate_similarity_json(model: AutoModel, tokenizer: AutoTokenizer, source_column: str,
-                            target_column: str, dataset: pd.DataFrame) -> Dict[int, Dict]:
-    """
-    Veri kümesindeki her kayıt için en benzer 5 kaydı bulan ve JSON formatında döndüren fonksiyon.
-
-    Args:
-        model: Hugging Face model
-        tokenizer: Hugging Face tokenizer
-        source_column: Kaynak kolon (arama yapılacak kolon)
-        target_column: Hedef kolon (hangi kolonda arama yapılacağı)
-        dataset: Veri kümesi
-
-    Returns:
-        result_dict: JSON formatında sonuçlar
-    """
-    result_dict = {}
-    
-    for idx, row in dataset.iterrows():
-        source_text = row[source_column]
-        
-        # Güncellenmiş find_top5_similar fonksiyonu artık doğrudan JSON formatında bir dict döndürür
-        similarity_result = {"source_text": source_text, "real_target": row[target_column]}
-        find5_res = find_top5_similar(model, tokenizer, source_text, target_column, dataset)
-        top5_texts = [res["text"] for res in find5_res["top5_matches"]]
-        similarity_result.update({"top5_texts": top5_texts})
-        similarity_result.update(find5_res)
-        # Sonuçları düzenle
-        result_dict[idx] = similarity_result
-        
-        # her 10 elemanda bir yazdır
-        if idx % 10 == 0:
-            print(f"İşleniyor: {idx+1}/{len(dataset)}")
-    
-    print("Tüm elemanlar işlendi.")
-    return result_dict
 
 
 def main():
