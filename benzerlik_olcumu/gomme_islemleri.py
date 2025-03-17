@@ -67,115 +67,65 @@ def get_token_embedding(model: AutoModel, tokenizer: AutoTokenizer, text: str, d
     # Numpy dizisine dönüştür ve döndür
     return sentence_embedding.cpu().numpy()
 
-def apply_tsne(token_embeddings: np.ndarray, perplexity: int = 5, max_iter: int = 1000, random_state: int = 42) -> np.ndarray:
+# Tekli eleman için t-SNE hesaplayan fonksiyon
+def tsne_tekli(embedding, perplexity=30, n_iter=1000):
     """
-    Token gömme vektörlerine t-SNE boyut indirgeme algoritmasını uygular.
+    Tek bir gömmeyi (embedding) alıp 2 boyutlu t-SNE dönüştürmesi uygular
     
     Args:
-        token_embeddings: İndirgenecek gömme vektörlerini içeren numpy dizisi
-        perplexity: t-SNE algoritmasının perplexity parametresi (varsayılan: 5)
-        max_iter: Maksimum iterasyon sayısı (varsayılan: 1000)
-        random_state: Rastgelelik için seed değeri (tekrarlanabilirlik için)
-    
+        embedding: Giriş gömme vektörü
+        perplexity: t-SNE perplexity parametresi
+        n_iter: t-SNE iterasyon sayısı
+        
     Returns:
-        np.ndarray: İki boyuta indirgenmiş gömme vektörlerini içeren numpy dizisi
+        2 boyutlu t-SNE sonucu (liste olarak)
     """
-    # Gömme matrisinin şeklini al
-    original_shape = token_embeddings.shape
-    
-    # Çok-boyutlu gömmeleri 2 boyutlu matrise yeniden şekillendir
-    # İlk boyut örnek sayısı, ikinci boyut özellik sayısı olmalı
-    reshaped_embeddings = token_embeddings.reshape(-1, original_shape[-1])
-    
-    # scikit-learn'den TSNE sınıfını import et
-    from sklearn.manifold import TSNE
-    
-    # t-SNE modelini oluştur
-    tsne = TSNE(
-        n_components=2,           # Çıktı boyutu (genellikle görselleştirme için 2 veya 3)
-        perplexity=perplexity,    # Lokal yapının korunmasını dengeler
-        n_iter=max_iter,          # Maksimum iterasyon sayısı
-        random_state=random_state # Sonuçların tekrarlanabilir olması için
-    )
-    
-    # t-SNE dönüşümünü uygula
-    # t-SNE, yüksek boyutlu verileri düşük boyutlu bir uzayda görselleştirmek için kullanılır [[2]]
-    tsne_embeddings = tsne.fit_transform(reshaped_embeddings)
-    
-    # Eğer gerekliyse, orijinal şekle benzer bir şekilde geri dönüştür
-    # (örnek sayısı x sequence_length x 2) boyutunda
-    if len(original_shape) > 2:
-        return tsne_embeddings.reshape(original_shape[0], original_shape[1], 2)
-    else:
-        return tsne_embeddings
+    # Tek bir vektör için TSNE hesaplanamaz, en az 2 örnek gerekir
+    # Bu nedenle aynı vektörden iki tane oluşturup sonra ilkini alacağız
+    temp_data = np.vstack([embedding, embedding])
+    tsne = TSNE(n_components=2, perplexity=perplexity, n_iter=n_iter, random_state=42)
+    tsne_result = tsne.fit_transform(temp_data)
+    return tsne_result[0].tolist()  # İlk sonucu liste olarak döndür
 
-def get_multi_token_embeddings(model: AutoModel, tokenizer: AutoTokenizer, text: str) -> np.ndarray:
+# Çoklu elemanlar için t-SNE hesaplayan fonksiyon
+def tsne_coklu(embeddings, perplexity=30, n_iter=1000):
     """
-    Verilen metnin token gömmelerini MATRİS olarak döndüren fonksiyon.
-    Her satır bir tokene, her sütun bir gömme boyutuna karşılık gelir.
+    Birden fazla gömmeyi alıp 2 boyutlu t-SNE dönüştürmesi uygular
     
     Args:
-        model: Hugging Face model
-        tokenizer: Hugging Face tokenizer
-        text: Gömüsü alınacak metin
-    
+        embeddings: Giriş gömme vektörleri listesi
+        perplexity: t-SNE perplexity parametresi
+        n_iter: t-SNE iterasyon sayısı
+        
     Returns:
-        np.ndarray: Token gömmeleri matrisi (token_sayısı x gömme_boyutu)
+        2 boyutlu t-SNE sonuçları (liste olarak)
     """
-    # Metni tokenize et
-    inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=4096, padding=True)
+    if len(embeddings) < 2:
+        # Tek eleman varsa tekli fonksiyonu kullan
+        return [tsne_tekli(embeddings[0], perplexity, n_iter)]
     
-    with torch.no_grad():
-        outputs = model(**inputs)
-    
-    # Token gömmelerini al
-    token_embeddings = outputs.last_hidden_state
-    
-    # Attention mask kullanarak sadece gerçek token gömmelerini al (padding tokenlarını çıkar)
-    attention_mask = inputs['attention_mask'][0]
-    valid_tokens = attention_mask.bool()
-    
-    # Sadece gerçek tokenlerin gömmelerini seç
-    token_embs = token_embeddings[0, valid_tokens].detach().cpu().numpy()
-    
-    return token_embs  # Boyut: (token_sayısı x gömme_boyutu)
+    # Birden fazla eleman varsa doğrudan t-SNE uygula
+    tsne = TSNE(n_components=2, perplexity=min(perplexity, len(embeddings)-1), 
+                n_iter=n_iter, random_state=42)
+    tsne_result = tsne.fit_transform(np.array(embeddings))
+    return tsne_result.tolist()  # Sonuçları liste olarak döndür
 
-def apply_multi_tsne(token_embeddings: np.ndarray, perplexity: int = 5, max_iter: int = 1000, random_state: int = 42) -> np.ndarray:
+# Sonuçları istenen formatta döndüren fonksiyon
+def tsne_sonuc_olustur(veri: list, save_prefix: str) -> dict:
     """
-    Token gömmelerini t-SNE ile 2 boyuta indirger.
+    Verilen soru ve cevap gömmelerini alıp t-SNE sonuçlarını istenen formatta döndürür
     
     Args:
-        token_embeddings: Token gömmelerini içeren matris (token_sayısı x gömme_boyutu)
-        perplexity: t-SNE için perplexity parametresi
-        n_iter: t-SNE için iterasyon sayısı
-        random_state: Tekrarlanabilirlik için rastgele seed değeri
-    
+        veri: Soru ve cevap gömmelerini içeren veri örneği
+        save_prefix: Gömme vektörlerinin kaydedildiği dosya adının öneki
+        
     Returns:
-        np.ndarray: 2 boyutlu t-SNE dönüşümü (token_sayısı x 2)
+        İstenen formatta t-SNE sonuçları
     """
-    # Token sayısını ve gömme boyutunu al
-    n_tokens, embedding_dim = token_embeddings.shape
-    
-    # Eğer token sayısı çok azsa t-SNE için uygun perplexity değerini ayarla
-    if n_tokens < 10:
-        perplexity = min(perplexity, n_tokens - 1)
-        perplexity = max(2, perplexity)  # En az 2 olsun
-    
-    # Eğer sadece bir token varsa t-SNE uygulanamaz
-    if n_tokens <= 1:
-        print("Tek token için t-SNE uygulanamıyor, rastgele bir nokta döndürülüyor.")
-        return np.random.rand(1, 2)
-    
-    # t-SNE modelini oluştur
-    tsne = TSNE(
-        n_components=2,         # 2 boyuta indirgeme
-        perplexity=perplexity,  # Perplexity değeri
-        max_iter=max_iter,          # İterasyon sayısı
-        learning_rate='auto',   # Otomatik öğrenme oranı
-        init='random',          # Rastgele başlangıç
-        random_state=random_state  # Tekrarlanabilirlik için seed
-    )
-    
-    # t-SNE'yi uygula
-    embeddings_2d = tsne.fit_transform(token_embeddings)
-    return embeddings_2d
+    soru_tsne = tsne_coklu([item["question_embedding"] for item in veri])
+    cevap_tsne = tsne_coklu([item["answer_embedding"] for item in veri])
+    tsne_sonuc = {
+        "question_tsne": soru_tsne,
+        "answer_tsne": cevap_tsne
+    }
+    return tsne_sonuc

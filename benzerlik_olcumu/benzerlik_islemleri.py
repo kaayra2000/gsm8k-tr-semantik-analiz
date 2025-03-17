@@ -5,8 +5,6 @@ import numpy as np
 import pandas as pd
 from transformers import AutoModel, AutoTokenizer
 
-from gomme_islemleri import get_multi_token_embeddings, apply_tsne
-
 def get_cosine_similarity(embedding1: np.ndarray, embedding2: np.ndarray) -> float:
     """
     İki token matrisi arasındaki benzerliği hesaplar.

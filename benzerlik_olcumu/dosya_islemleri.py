@@ -10,6 +10,7 @@ file_dir = os.path.dirname(os.path.abspath(__file__))
 similarity_results_dir = os.path.join(file_dir, "similarity_results")
 top1_top5_results_dir = os.path.join(file_dir, "top1_top5_results")
 embeddings_dir = os.path.join(file_dir, "embeddings")
+tsne_save_dir = os.path.join(file_dir, "tsne_results")
 def tr_to_lower(text: str) -> str:
     """
     Verilen metni Türkçe karakterleri doğru şekilde koruyarak küçük harfe çeviren fonksiyon.
@@ -302,5 +303,63 @@ def read_embedding_from_file(save_prefix: str) -> list:
                 print(f"Satır {line_num} işlenemedi: {e}")
                 continue
     
-    print(f"{os.path.dirname(json_path)} dosyasından {len(embeddings)} gömme vektörü yüklendi.")
+    print(f"{os.path.basename(json_path)} dosyasından {len(embeddings)} gömme vektörü yüklendi.")
     return embeddings
+
+def get_tsne_file_path(prefix: str) -> str:
+    """
+    t-SNE sonuçlarının kaydedileceği dosya adını döndüren fonksiyon.
+    
+    Args:
+        prefix: Kaydedilecek dosya adının öneki
+    
+    Returns:
+
+        str: t-SNE sonuçlarının kaydedileceği dosya adı
+    """
+    return os.path.join(tsne_save_dir, f"{prefix}_tsne_results.json")
+
+def save_tsne_json(data: Dict, save_prefix: str):
+    """
+    t-SNE sonuçlarını JSON formatında kaydeden fonksiyon.
+    
+    Args:
+        data: Kaydedilecek t-SNE sonuçları
+        save_prefix: Kaydedilecek dosya adının öneki
+    """
+    # Create directory if it doesn't exist
+    if not os.path.exists(tsne_save_dir):
+        os.makedirs(tsne_save_dir)
+    
+    # Get the file path with json extension
+    json_path = get_tsne_file_path(save_prefix)
+    
+    # Write the data to the file
+    with open(json_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
+def load_tsne_json(save_prefix: str) -> Dict:
+    """
+    JSON formatında kaydedilmiş t-SNE sonuçlarını okuyan fonksiyon.
+    
+    Args:
+        save_prefix: Kaydedilen dosya adının öneki
+
+    Returns:
+
+        Dict: Okunan t-SNE sonuçları
+    """
+    # Get the file path
+    json_path = get_tsne_file_path(save_prefix)
+    
+    # Check if file exists
+    if not os.path.exists(json_path):
+        print(f"Dosya bulunamadı: {json_path}")
+        return {}
+    
+    # Read the JSON file
+    with open(json_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    
+    print(f"{os.path.basename(json_path)} dosyasından t-SNE sonuçları yüklendi.")
+    return data
