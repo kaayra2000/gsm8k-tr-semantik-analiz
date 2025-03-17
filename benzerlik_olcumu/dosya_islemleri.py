@@ -108,9 +108,7 @@ def get_calculated_probabilities_size(prefix: str) -> int:
         int: Dosyada şimdiye kadar kaç olasılık vektörü kaydedildiği
     """
     file_path = get_probabilities_dir(prefix)
-    if not os.path.exists(file_path):
-        return 0
-    return sum(1 for line in open(file_path))
+    return get_json_size(file_path)
 
 def append_probability(prefix: str, index1: int, index2: int, probability: float,
                        source_dest_type: str = "question_to_answer"):
@@ -139,9 +137,11 @@ def append_probability(prefix: str, index1: int, index2: int, probability: float
     }
 
     # Dosyayı aç ve yeni girişi ekle
+    append_json(file_path, json_object)
+def append_json(file_path: str, json_object: Dict):
     file_exists = os.path.exists(file_path) and os.path.getsize(file_path) > 0
     with open(file_path, 'a' if file_exists else 'w', encoding='utf-8') as f:
-        # JSON objesini ve virgülü tek bir satıra yaz
+        # Write the JSON object and a comma on a single line
         f.write(json.dumps(json_object, ensure_ascii=False))
         f.write(',\n')
 def read_probability_from_file(prefix: str) -> list:
@@ -295,6 +295,7 @@ def load_dataset() -> pd.DataFrame:
     df['question'] = df['question'].apply(tr_to_lower)
     df['answer'] = df['answer'].apply(tr_to_lower)
     df["index"] = range(0, len(df))  # 1'den başlayarak her satıra sırayla numara ver
+    df = df.head(10)
     return df
 
 def get_embeddings_path(save_prefix: str) -> str:
@@ -309,6 +310,20 @@ def get_embeddings_path(save_prefix: str) -> str:
     """
     return os.path.join(embeddings_dir, f"{save_prefix}_embeddings.json")
 
+def get_json_size(file_path: str) -> int:
+    """
+    JSON dosyasındaki satır sayısını döndüren fonksiyon.
+
+    Args:
+        file_path: Dosya yolu
+
+    Returns:
+        int: Dosyadaki satır sayısı
+    """
+    if not os.path.exists(file_path):
+        return 0
+    return sum(1 for line in open(file_path))
+
 def get_calculated_embeddings_size(save_prefix: str) -> int:
     """
     save_prefix'e göre kaydedilen gömme vektörlerinin sayısını döndüren fonksiyon.
@@ -320,9 +335,7 @@ def get_calculated_embeddings_size(save_prefix: str) -> int:
         int: dosyada şimdiye kadar kaç gömme vektörü kaydedildiği
     """
     file_path = get_embeddings_path(save_prefix)
-    if not os.path.exists(file_path):
-        return 0
-    return sum(1 for line in open(file_path))
+    return get_json_size(file_path)
 
 def append_embedding(save_prefix: str, item: pd.Series, question_embedding: 'np.ndarray', answer_embedding: 'np.ndarray'):
     """
@@ -352,12 +365,7 @@ def append_embedding(save_prefix: str, item: pd.Series, question_embedding: 'np.
         "answer_embedding": answer_embedding.tolist()
     }
     
-    # Open file and append the new entry
-    file_exists = os.path.exists(json_path) and os.path.getsize(json_path) > 0
-    with open(json_path, 'a' if file_exists else 'w', encoding='utf-8') as f:
-        # Write the JSON object and a comma on a single line
-        f.write(json.dumps(json_object, ensure_ascii=False))
-        f.write(',\n')
+    append_json(json_path, json_object)
 
 def read_embedding_from_file(save_prefix: str) -> list:
     """
