@@ -2,23 +2,23 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 from typing import List, Dict
-from dosya_islemleri import get_tsne_photo_path
-def plot_two_tsne_results(tsne_result1, tsne_result2, 
+from dosya_islemleri import get_tsne_photo_path, get_example_tsne_photo_path
+def plot_two_tsne_results(tsne_result1, tsne_result2, save_prefix, 
                          label1="Kaynak Metin", label2="Modelin Benzer Bulduğu Metin",
                          color1="blue", color2="red",
-                         figsize=(18, 8), file_name=None):
+                         figsize=(18, 8)):
     """
     İki farklı t-SNE sonucunu yan yana ayrı grafiklerde çizdirir.
     
     Args:
         tsne_result1: Birinci t-SNE sonucu (n_tokens1 x 2 boyutunda)
         tsne_result2: İkinci t-SNE sonucu (n_tokens2 x 2 boyutunda)
+        save_prefix: Kaydedilecek dosya adının öneki
         label1: Birinci veri seti için etiket
         label2: İkinci veri seti için etiket
         color1: Birinci veri seti için renk
         color2: İkinci veri seti için renk
         figsize: Figür boyutu (genişlik, yükseklik)
-        save_path: Grafiğin kaydedileceği dosya yolu
     """
     # Liste tipindeki verileri NumPy dizisine dönüştür
     tsne_result1 = np.array(tsne_result1)
@@ -66,12 +66,11 @@ def plot_two_tsne_results(tsne_result1, tsne_result2,
     # Grafiği düzenle ve kaydet
     plt.tight_layout()
     
-    if file_name:
-        file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "similarity_results", "gorseller", file_name)
-        if not os.path.exists(os.path.dirname(file_path)):
-            os.makedirs(os.path.dirname(file_path))
-        plt.savefig(file_path, dpi=300, bbox_inches='tight')
-    
+    file_path = get_example_tsne_photo_path(save_prefix)
+    if not os.path.exists(os.path.dirname(file_path)):
+        os.makedirs(os.path.dirname(file_path))
+    plt.savefig(file_path, dpi=300, bbox_inches='tight')
+
     return plt
 
 def visualize_top1_top5_scores(results_list: List) -> None:

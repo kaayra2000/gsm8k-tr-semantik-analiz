@@ -192,7 +192,6 @@ def load_dataset() -> pd.DataFrame:
     df['question'] = df['question'].apply(tr_to_lower)
     df['answer'] = df['answer'].apply(tr_to_lower)
     df["index"] = range(0, len(df))  # 1'den başlayarak her satıra sırayla numara ver
-    df = df.head(10)
     return df
 
 def get_embeddings_path(save_prefix: str) -> str:
@@ -331,6 +330,19 @@ def get_tsne_photo_path(prefix: str) -> str:
         str: t-SNE sonuçlarının kaydedileceği dosya adı
     """
     return os.path.join(tsne_save_dir, f"{prefix}_tsne_results.png")
+
+def get_example_tsne_photo_path(prefix: str) -> str:
+    """
+    Örnek t-SNE sonuçlarının kaydedileceği dosya adını döndüren fonksiyon.
+    
+    Args:
+        prefix: Kaydedilecek dosya adının öneki
+
+    Returns:
+
+        str: t-SNE sonuçlarının kaydedileceği dosya adı
+    """
+    return os.path.join(tsne_save_dir, "ornekler", f"{prefix}_tsne_results.png")
 
 def save_tsne_json(data: Dict, save_prefix: str):
     """
