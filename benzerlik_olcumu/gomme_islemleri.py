@@ -3,7 +3,7 @@ import numpy as np
 from transformers import AutoModel, AutoTokenizer
 from sklearn.manifold import TSNE
 import pandas as pd
-from dosya_islemleri import get_calculated_embeddings_size, append_embedding
+from dosya_islemleri import get_calculated_embeddings_size, append_embedding, save_tsne_json
 
 def calculate_and_save_raw_embeddings_from_dataset(model: AutoModel, tokenizer: AutoTokenizer, 
                                                    dataset: pd.DataFrame, save_prefix: str, device_type: str = "cuda") -> np.ndarray:
@@ -118,7 +118,7 @@ def tsne_sonuc_olustur(veri: list, save_prefix: str) -> dict:
     Args:
         veri: Soru ve cevap gömmelerini içeren veri örneği
         save_prefix: Gömme vektörlerinin kaydedildiği dosya adının öneki
-        
+
     Returns:
         İstenen formatta t-SNE sonuçları
     """
@@ -128,4 +128,5 @@ def tsne_sonuc_olustur(veri: list, save_prefix: str) -> dict:
         "question_tsne": soru_tsne,
         "answer_tsne": cevap_tsne
     }
+    save_tsne_json(tsne_sonuc, save_prefix)
     return tsne_sonuc

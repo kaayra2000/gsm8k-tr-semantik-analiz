@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 from typing import List, Dict
+from dosya_islemleri import get_tsne_photo_path
 def plot_two_tsne_results(tsne_result1, tsne_result2, 
                          label1="Kaynak Metin", label2="Modelin Benzer Bulduğu Metin",
                          color1="blue", color2="red",
@@ -167,3 +168,68 @@ def plot_t1_t5_scores(results: List[Dict], output_path: str, title: str, top1_co
     plt.close()
     
     print(f"Görsel kaydedildi: {output_path}")
+
+def save_tsne_png(data: Dict, save_prefix: str, q_color='blue', a_color='yellow'):
+    """
+    t-SNE görselleştirme grafiği oluşturur ve kaydeder.
+    
+    Args:
+        data: 'question_tsne' ve 'answer_tsne' noktalarını içeren sözlük
+        save_prefix: Kaydedilen dosya için önek
+        q_color: Soru noktaları için renk (varsayılan: mavi)
+        a_color: Cevap noktaları için renk (varsayılan: sarı)
+    
+    Returns:
+        Kaydedilen PNG dosyasının yolu
+    """
+    # Dosya yolunu al
+    png_path = get_tsne_photo_path(save_prefix)
+    
+    # Yeni bir şekil oluştur
+    plt.figure(figsize=(10, 8))
+    
+    # Veri noktalarını çıkar
+    q_points = data.get("question_tsne", [])
+    a_points = data.get("answer_tsne", [])
+    
+    # answer_tsne formatını kontrol et ve gerekirse düzelt
+    if isinstance(a_points, str):
+        try:
+            # JSON formatında string olabilir, değilse boş liste kullan
+            import json
+            a_points = json.loads(a_points)
+        except:
+            a_points = []
+    elif isinstance(a_points, list) and len(a_points) > 0 and not isinstance(a_points[0], list):
+        a_points = [a_points]
+    
+    # Çizilecek nokta olup olmadığını kontrol et
+    if not q_points and not a_points:
+        raise ValueError("Verilen veride t-SNE noktası bulunamadı")
+    
+    # Soru noktalarını mavi yuvarlak olarak çiz
+    if q_points:
+        q_x = [point[0] for point in q_points if len(point) >= 2]
+        q_y = [point[1] for point in q_points if len(point) >= 2]
+        plt.scatter(q_x, q_y, color=q_color, marker='o', label='Sorular')
+    
+    # Cevap noktalarını sarı kare olarak çiz
+    if a_points:
+        # Her noktanın en az 2 değer içerdiğinden emin ol
+        valid_points = [p for p in a_points if isinstance(p, list) and len(p) >= 2]
+        if valid_points:
+            a_x = [point[0] for point in valid_points]
+            a_y = [point[1] for point in valid_points]
+            plt.scatter(a_x, a_y, color=a_color, marker='s', label='Cevaplar')
+    
+    # Etiketler ve açıklamaları ekle
+    plt.title('t-SNE Görselleştirmesi')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    
+    # Görüntüyü kaydet
+    plt.savefig(png_path, dpi=300, bbox_inches='tight')
+    plt.close()
+    
+    print(f"Görselleştirme kaydedildi: {png_path}")
+    return png_path
