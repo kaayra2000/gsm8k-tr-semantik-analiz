@@ -25,9 +25,11 @@ def calculate_and_save_raw_embeddings_from_dataset(model: AutoModel, tokenizer: 
     print("\n")
     for i in range(calculated_embeddings_size, len(dataset)):
         item = dataset.iloc[i]
-        text = item["question"]
-        embedding = get_token_embedding(model, tokenizer, text, device_type=device_type)
-        append_embedding(save_prefix, embedding, item)
+        question_text = item["question"]
+        question_embedding = get_token_embedding(model, tokenizer, question_text, device_type)
+        answer_text = item["answer"]
+        answer_embedding = get_token_embedding(model, tokenizer, answer_text, device_type)
+        append_embedding(save_prefix, item, question_embedding, answer_embedding)
         print(f"{i+1}/{len(dataset)} gömme vektörü hesaplandı ve kaydedildi.", end="\r")
 
 def get_token_embedding(model: AutoModel, tokenizer: AutoTokenizer, text: str, device_type: str = "cuda") -> np.ndarray:

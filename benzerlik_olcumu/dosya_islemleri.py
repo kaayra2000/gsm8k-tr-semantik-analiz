@@ -219,17 +219,17 @@ def get_calculated_embeddings_size(save_prefix: str) -> int:
         return 0
     return sum(1 for line in open(file_path))
 
-def append_embedding(save_prefix: str, embedding, item: pd.Series):
+def append_embedding(save_prefix: str, item: pd.Series, question_embedding: 'np.ndarray', answer_embedding: 'np.ndarray'):
     """
     Bir gömme vektörünü ve ilgili veriyi JSON formatında dosyaya ekleyen fonksiyon.
     Her bir gömme yeni bir satırda kaydedilir.
     
     Args:
         save_prefix: Kaydedilecek dosya adının öneki
-        embedding: Eklenecek gömme vektörü
         item: Kaydedilecek pandas Series nesnesi (soru ve cevap içeren)
+        question_embedding: Soru gömme vektörü
+        answer_embedding: Cevap gömme vektörü
     """
-    import json
     
     # Create directory if it doesn't exist
     if not os.path.exists(embeddings_dir):
@@ -242,7 +242,8 @@ def append_embedding(save_prefix: str, embedding, item: pd.Series):
     json_object = {
         "question": item["question"],
         "answer": item["answer"],
-        "embedding": embedding.tolist() if hasattr(embedding, 'tolist') else list(embedding)
+        "question_embedding": question_embedding.tolist(),
+        "answer_embedding": answer_embedding.tolist()
     }
     
     # Open file and append the new entry
@@ -251,3 +252,53 @@ def append_embedding(save_prefix: str, embedding, item: pd.Series):
         # Write the JSON object and a comma on a single line
         f.write(json.dumps(json_object, ensure_ascii=False))
         f.write(',\n')
+
+def read_embedding_from_file(save_prefix: str) -> list:
+    """
+    JSON formatında kaydedilmiş gömme vektörlerini ve ilgili verileri okuyan fonksiyon.
+    
+    Args:
+        save_prefix: Kaydedilen dosya adının öneki
+        
+    Returns:
+        list: Soru, cevap ve gömme vektörleri içeren nesnelerin listesi
+    """
+    
+    # Get the file path
+    json_path = get_embeddings_path(save_prefix)
+    
+    # Check if file exists
+    if not os.path.exists(json_path):
+        print(f"Dosya bulunamadı: {json_path}")
+        return []
+    
+    # Read all embeddings
+    embeddings = []
+    with open(json_path, 'r', encoding='utf-8') as f:
+        line_num = 0
+        for line in f:
+            line_num += 1
+            # Boş satırları atla
+            line = line.strip()
+            if not line:
+                continue
+                
+            # Sondaki virgülü kaldır
+            if line.endswith(','):
+                line = line[:-1]
+                
+            # JSON nesnesini ayrıştır
+            try:
+                embedding_obj = json.loads(line)
+                
+                # Gömme listesini numpy dizisine dönüştür
+                if isinstance(embedding_obj.get('embedding'), list):
+                    embedding_obj['embedding'] = np.array(embedding_obj['embedding'])
+                    
+                embeddings.append(embedding_obj)
+            except json.JSONDecodeError as e:
+                print(f"Satır {line_num} işlenemedi: {e}")
+                continue
+    
+    print(f"{os.path.dirname(json_path)} dosyasından {len(embeddings)} gömme vektörü yüklendi.")
+    return embeddings
