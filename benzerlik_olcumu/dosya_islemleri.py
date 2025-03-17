@@ -11,6 +11,7 @@ similarity_results_dir = os.path.join(file_dir, "similarity_results")
 top1_top5_results_dir = os.path.join(file_dir, "top1_top5_results")
 embeddings_dir = os.path.join(file_dir, "embeddings")
 tsne_save_dir = os.path.join(file_dir, "tsne_results")
+probabilities_dir = os.path.join(file_dir, "probabilities")
 def tr_to_lower(text: str) -> str:
     """
     Verilen metni Türkçe karakterleri doğru şekilde koruyarak küçük harfe çeviren fonksiyon.
@@ -84,6 +85,108 @@ def get_all_top1_top5_results() -> List[Dict]:
                 data = json.load(f)
                 all_results.append(data)
     return all_results
+def get_probabilities_dir(prefix: str) -> str:
+    """
+    Modelin olasılıklarını kaydedileceği dizini döndüren fonksiyon.
+    
+    Args:
+        prefix: Model adının yer aldığı dosya adı öneki
+    
+    Returns:
+        str: Olasılıkların kaydedileceği dizin
+    """
+    return os.path.join(probabilities_dir, f"{prefix}_probabilities.json")
+
+def get_calculated_probabilities_size(prefix: str) -> int:
+    """
+    prefix'e göre kaydedilen olasılık vektörlerinin sayısını döndüren fonksiyon.
+    
+    Args:
+        prefix: Kaydedilecek dosya adının öneki
+    
+    Returns:
+        int: Dosyada şimdiye kadar kaç olasılık vektörü kaydedildiği
+    """
+    file_path = get_probabilities_dir(prefix)
+    if not os.path.exists(file_path):
+        return 0
+    return sum(1 for line in open(file_path))
+
+def append_probability(prefix: str, index1: int, index2: int, probability: float,
+                       source_dest_type: str = "question_to_answer"):
+    """
+    Bir olasılık vektörünü ve ilgili veriyi JSON formatında dosyaya ekleyen fonksiyon.
+    Her bir olasılık vektörü yeni bir satırda kaydedilir.
+    
+    Args:
+        prefix: Kaydedilecek dosya adının öneki
+        item: Kaydedilecek pandas Series nesnesi (soru ve cevap içeren)
+        probabilities: Olasılık vektörü
+    """
+    # Eğer dosya yoksa oluştur
+    if not os.path.exists(probabilities_dir):
+        os.makedirs(probabilities_dir)
+    
+    # Dosya yolu
+    file_path = get_probabilities_dir(prefix)
+
+    # JSON objesi oluştur
+    json_object = {
+        "index1": index1,
+        "index2": index2,
+        "probability": probability,
+        "source_dest_type": source_dest_type
+    }
+
+    # Dosyayı aç ve yeni girişi ekle
+    file_exists = os.path.exists(file_path) and os.path.getsize(file_path) > 0
+    with open(file_path, 'a' if file_exists else 'w', encoding='utf-8') as f:
+        # JSON objesini ve virgülü tek bir satıra yaz
+        f.write(json.dumps(json_object, ensure_ascii=False))
+        f.write(',\n')
+def read_probability_from_file(prefix: str) -> list:
+    """
+    JSON formatında kaydedilmiş olasılık vektörlerini ve ilgili verileri okuyan fonksiyon.
+    
+    Args:
+        prefix: Kaydedilen dosya adının öneki
+
+    Returns:
+        list: Soru, cevap ve olasılık vektörleri içeren nesnelerin listesi
+    """
+    # Dosya yolu
+    file_path = get_probabilities_dir(prefix)
+    
+    # Dosya var mı diye kontrol et
+    if not os.path.exists(file_path):
+        print(f"Dosya bulunamadı: {file_path}")
+        return []
+    
+    # Tüm olasılıkları oku
+    probabilities = []
+    with open(file_path, 'r', encoding='utf-8') as f:
+        line_num = 0
+        for line in f:
+            line_num += 1
+            # Boş satırları atla
+            line = line.strip()
+            if not line:
+                continue
+                
+            # Satırın sonundaki virgülü kaldır
+            if line.endswith(','):
+                line = line[:-1]
+                
+            # JSON nesnesini ayrıştır
+            try:
+                probability_obj = json.loads(line)
+                probabilities.append(probability_obj)
+            except json.JSONDecodeError as e:
+                print(f"Satır {line_num} işlenemedi: {e}")
+                continue
+    
+    print(f"{os.path.basename(file_path)} dosyasından {len(probabilities)} olasılık vektörü yüklendi.")
+    return probabilities
 def read_top1_top5_results_json(prefix: str, is_question_to_answer: bool) -> Dict:
     """
     JSON dosyasından top1 ve top5 sonuçlarını okuyan fonksiyon.
