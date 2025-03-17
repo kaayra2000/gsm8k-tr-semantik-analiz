@@ -190,6 +190,7 @@ def load_dataset() -> pd.DataFrame:
     # tüm karakterleri küçült
     df['question'] = df['question'].apply(tr_to_lower)
     df['answer'] = df['answer'].apply(tr_to_lower)
+    df["index"] = range(0, len(df))  # 1'den başlayarak her satıra sırayla numara ver
     return df
 
 def get_embeddings_path(save_prefix: str) -> str:
@@ -240,6 +241,7 @@ def append_embedding(save_prefix: str, item: pd.Series, question_embedding: 'np.
     
     # Create a JSON object with question, answer and embedding
     json_object = {
+        "index": int(item["index"]),
         "question": item["question"],
         "answer": item["answer"],
         "question_embedding": question_embedding.tolist(),
