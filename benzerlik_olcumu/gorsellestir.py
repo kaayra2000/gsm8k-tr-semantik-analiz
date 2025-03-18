@@ -89,6 +89,7 @@ def plot_t1_t5_scores(question_data, answer_data, question_color='blue', answer_
     plt.subplots_adjust(right=0.85)  # Sağ tarafta legend için yer aç
     
     plt.savefig(os.path.join(top1_top5_results_dir, "results.png"), dpi=300, bbox_inches='tight')
+    plt.close()
 def plot_two_tsne_results(tsne_result1, tsne_result2, save_prefix, 
                          label1="Kaynak Metin", label2="Modelin Benzer Bulduğu Metin",
                          color1="blue", color2="red",
@@ -156,6 +157,7 @@ def plot_two_tsne_results(tsne_result1, tsne_result2, save_prefix,
     if not os.path.exists(os.path.dirname(file_path)):
         os.makedirs(os.path.dirname(file_path))
     plt.savefig(file_path, dpi=300, bbox_inches='tight')
+    plt.close()
 
 
 def save_tsne_png(data: Dict, save_prefix: str, q_color='blue', a_color='yellow'):

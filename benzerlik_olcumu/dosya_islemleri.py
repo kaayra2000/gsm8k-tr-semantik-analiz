@@ -215,10 +215,10 @@ def load_model(model_name: str, device_type: str = "cuda") -> Tuple[AutoModel, A
         model: Yüklenen model
         tokenizer: Yüklenen tokenizer
     """
-    print(f"Model yükleniyor: {model_name}")
+    print(f"Model yükleniyor: {model_name}", end="\r")
     tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
     model = AutoModel.from_pretrained(model_name, trust_remote_code=True).to(device_type)
-    print(f"Model yüklendi. {model_name}")
+    print(f"Model yüklendi. {model_name}", end="\r")
     return model, tokenizer
 
 

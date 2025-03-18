@@ -22,7 +22,6 @@ def calculate_and_save_raw_embeddings_from_dataset(model: AutoModel, tokenizer: 
     """
     calculated_embeddings_size = get_calculated_embeddings_size(save_prefix)
     print(f"Hali hazırda hesaplanmış gömme vektörleri sayısı: {calculated_embeddings_size}, bu kayıtlar atlanıyor.")
-    print("\n")
     for i in range(calculated_embeddings_size, len(dataset)):
         item = dataset.iloc[i]
         question_text = item["question"]
@@ -68,14 +67,14 @@ def get_token_embedding(model: AutoModel, tokenizer: AutoTokenizer, text: str, d
     return sentence_embedding.cpu().numpy()
 
 # Tekli eleman için t-SNE hesaplayan fonksiyon
-def tsne_tekli(embedding, perplexity=30, n_iter=1000):
+def tsne_tekli(embedding, perplexity=30, max_iter=1000):
     """
     Tek bir gömmeyi (embedding) alıp 2 boyutlu t-SNE dönüştürmesi uygular
     
     Args:
         embedding: Giriş gömme vektörü
         perplexity: t-SNE perplexity parametresi
-        n_iter: t-SNE iterasyon sayısı
+        max_iter: t-SNE iterasyon sayısı
         
     Returns:
         2 boyutlu t-SNE sonucu (liste olarak)
@@ -83,30 +82,30 @@ def tsne_tekli(embedding, perplexity=30, n_iter=1000):
     # Tek bir vektör için TSNE hesaplanamaz, en az 2 örnek gerekir
     # Bu nedenle aynı vektörden iki tane oluşturup sonra ilkini alacağız
     temp_data = np.vstack([embedding, embedding])
-    tsne = TSNE(n_components=2, perplexity=perplexity, n_iter=n_iter, random_state=42)
+    tsne = TSNE(n_components=2, perplexity=perplexity, max_iter=max_iter, random_state=42)
     tsne_result = tsne.fit_transform(temp_data)
     return tsne_result[0].tolist()  # İlk sonucu liste olarak döndür
 
 # Çoklu elemanlar için t-SNE hesaplayan fonksiyon
-def tsne_coklu(embeddings, perplexity=30, n_iter=1000):
+def tsne_coklu(embeddings, perplexity=30, max_iter=1000):
     """
     Birden fazla gömmeyi alıp 2 boyutlu t-SNE dönüştürmesi uygular
     
     Args:
         embeddings: Giriş gömme vektörleri listesi
         perplexity: t-SNE perplexity parametresi
-        n_iter: t-SNE iterasyon sayısı
+        max_iter: t-SNE iterasyon sayısı
         
     Returns:
         2 boyutlu t-SNE sonuçları (liste olarak)
     """
     if len(embeddings) < 2:
         # Tek eleman varsa tekli fonksiyonu kullan
-        return [tsne_tekli(embeddings[0], perplexity, n_iter)]
+        return [tsne_tekli(embeddings[0], perplexity, max_iter)]
     
     # Birden fazla eleman varsa doğrudan t-SNE uygula
     tsne = TSNE(n_components=2, perplexity=min(perplexity, len(embeddings)-1), 
-                n_iter=n_iter, random_state=42)
+                max_iter=max_iter, random_state=42)
     tsne_result = tsne.fit_transform(np.array(embeddings))
     return tsne_result.tolist()  # Sonuçları liste olarak döndür
 
@@ -169,7 +168,7 @@ def apply_multi_tsne(token_embeddings: np.ndarray, perplexity: int = 5, max_iter
     Args:
         token_embeddings: Token gömmelerini içeren matris (token_sayısı x gömme_boyutu)
         perplexity: t-SNE için perplexity parametresi
-        n_iter: t-SNE için iterasyon sayısı
+        max_iter: t-SNE için iterasyon sayısı
         random_state: Tekrarlanabilirlik için rastgele seed değeri
     
     Returns:
