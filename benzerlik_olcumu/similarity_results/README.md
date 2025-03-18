@@ -1,1 +1,0 @@
-örnek amaçlı 20 elemana sahip veri kümesinde çalıştırılan modellerin sonuçları.
