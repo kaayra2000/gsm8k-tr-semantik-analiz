@@ -92,7 +92,7 @@ def plot_t1_t5_scores(question_data, answer_data, question_color='blue', answer_
     plt.close()
 def plot_two_tsne_results(tsne_result1, tsne_result2, save_prefix, idx: int,
                          label1="Kaynak Metin", label2="Modelin Benzer Bulduğu Metin",
-                         color1="blue", color2="red",
+                         color1="blue", color2="red", title = "t-SNE Görselleştirmesi",
                          figsize=(18, 8)):
     """
     İki farklı t-SNE sonucunu yan yana ayrı grafiklerde çizdirir.
@@ -106,6 +106,7 @@ def plot_two_tsne_results(tsne_result1, tsne_result2, save_prefix, idx: int,
         label2: İkinci veri seti için etiket
         color1: Birinci veri seti için renk
         color2: İkinci veri seti için renk
+        title: Grafik başlığı
         figsize: Figür boyutu (genişlik, yükseklik)
     """
     # Liste tipindeki verileri NumPy dizisine dönüştür
@@ -113,7 +114,6 @@ def plot_two_tsne_results(tsne_result1, tsne_result2, save_prefix, idx: int,
     tsne_result2 = np.array(tsne_result2)
     # Figürü ve alt grafikleri oluştur
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=figsize)
-    title=f"{label1} ve {label2} Gömmelerinin t-SNE Görselleştirmesi",
     # İlk t-SNE sonucunu sol grafikte çizgiyle bağlanmış noktalar olarak çiz
     ax1.plot(
         tsne_result1[:, 0],  # x koordinatları
@@ -148,7 +148,6 @@ def plot_two_tsne_results(tsne_result1, tsne_result2, save_prefix, idx: int,
     ax2.set_ylabel("t-SNE Boyut 2", fontsize=12)
     ax2.grid(True, linestyle='--', alpha=0.5)
     
-    # Genel başlık ekle
     fig.suptitle(title, fontsize=16)
     
     # Grafiği düzenle ve kaydet
