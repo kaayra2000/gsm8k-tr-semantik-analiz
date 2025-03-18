@@ -31,9 +31,6 @@ def calculate_top1_top5_scores(data: list, model_name: str) -> dict:
     top1_score = top1_correct / total_entries if total_entries > 0 else 0
     top5_score = top5_correct / total_entries if total_entries > 0 else 0
     
-    # Model adını dosya adından al
-    model_name = "ytu_ce_cosmos_turkish_colbert"
-    
     return {
         "model_name": model_name,
         "top1_score": top1_score,

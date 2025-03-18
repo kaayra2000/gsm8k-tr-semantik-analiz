@@ -207,7 +207,6 @@ def get_and_save_all_top5_matches(data, save_prefix: str):
         if q_to_a_result:
             append_top1_top5_results_json(save_prefix, True, q_to_a_result)
         print(f"{idx+1}/{len(unique_source_indices_list)} benzerlik sonuçları hesaplandı ve kaydedildi.", end="\r")
-    print("\n")
     for idx in range(calculated_answer_size, len(unique_source_indices_list)):
         source_index = unique_source_indices_list[idx]
         # Cevap→soru analizi
@@ -215,4 +214,3 @@ def get_and_save_all_top5_matches(data, save_prefix: str):
         if a_to_q_result:
             append_top1_top5_results_json(save_prefix, False, a_to_q_result)
         print(f"{idx+1}/{len(unique_source_indices_list)} benzerlik sonuçları hesaplandı ve kaydedildi.", end="\r")
-    print("\n")
