@@ -243,6 +243,7 @@ def load_dataset() -> pd.DataFrame:
     df['question'] = df['question'].apply(tr_to_lower)
     df['answer'] = df['answer'].apply(tr_to_lower)
     df["index"] = range(0, len(df))  # 1'den başlayarak her satıra sırayla numara ver
+    df = df.head(10)
     return df
 
 def get_embeddings_path(save_prefix: str) -> str:
