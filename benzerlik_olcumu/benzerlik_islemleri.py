@@ -2,48 +2,92 @@ import numpy as np
 from typing import List, Dict
 from dosya_islemleri import get_calculated_probabilities_size, append_probability, append_top1_top5_results_json, get_calculated_top5_results_size
 import heapq
-
-def get_cosine_similarity(embedding1, embedding2) -> float:
+import torch
+def get_cosine_similarity(embedding1, embedding2, device='auto') -> float:
     """
     İki gömme vektörü arasındaki kosinüs benzerliğini hesaplar.
     
     Args:
         embedding1: İlk gömme vektörü (liste veya numpy dizisi)
         embedding2: İkinci gömme vektörü (liste veya numpy dizisi)
+        device: Hesaplama için kullanılacak cihaz ('auto', 'cpu', 'gpu')
+               'auto' değeri mevcutsa GPU kullanacaktır
         
     Returns:
         float: İki vektör arasındaki kosinüs benzerliği (-1 ile 1 arasında)
     """
     
-    # Gömme vektörlerini numpy dizilerine dönüştür
-    if not isinstance(embedding1, np.ndarray):
-        embedding1 = np.array(embedding1)
-    if not isinstance(embedding2, np.ndarray):
-        embedding2 = np.array(embedding2)
+    # GPU kullanılabilirlik kontrolü
+    use_gpu = False
+    if device == 'auto' or device == 'gpu':
+        try:
+            if torch.cuda.is_available():
+                use_gpu = True
+            elif device == 'gpu':
+                print("GPU istenildi ancak kullanılamıyor. CPU kullanılacak.")
+        except ImportError:
+            if device == 'gpu':
+                print("PyTorch yüklü değil. GPU kullanılamıyor. CPU kullanılacak.")
     
-    # Vektörlerin boyutlarını kontrol et
-    if embedding1.shape != embedding2.shape:
-        raise ValueError("Gömme vektörlerinin boyutları eşleşmiyor!")
-    
-    # Sıfır vektörlerine karşı korunma
-    norm1 = np.linalg.norm(embedding1)
-    norm2 = np.linalg.norm(embedding2)
-    
-    if norm1 == 0 or norm2 == 0:
-        return 0.0  # Sıfır vektörleri arasında anlamlı bir benzerlik hesaplanamaz
-    
-    # Kosinüs benzerliği hesaplama formülü: cos(θ) = (A·B) / (||A|| * ||B||)
-    # Nokta çarpımı
-    dot_product = np.dot(embedding1, embedding2)
-    
-    # Normların çarpımı
-    norms_product = norm1 * norm2
-    
-    # Kosinüs benzerliği
-    similarity = dot_product / norms_product
-    
-    return similarity
-
+    if use_gpu:
+        # Torch tensorlarına dönüştür
+        if isinstance(embedding1, np.ndarray):
+            embedding1 = torch.from_numpy(embedding1).float().cuda()
+        elif isinstance(embedding1, list):
+            embedding1 = torch.tensor(embedding1, dtype=torch.float32).cuda()
+        else:
+            embedding1 = embedding1.cuda()  # Zaten torch tensor ise
+            
+        if isinstance(embedding2, np.ndarray):
+            embedding2 = torch.from_numpy(embedding2).float().cuda()
+        elif isinstance(embedding2, list):
+            embedding2 = torch.tensor(embedding2, dtype=torch.float32).cuda()
+        else:
+            embedding2 = embedding2.cuda()  # Zaten torch tensor ise
+        
+        # Vektörlerin boyutlarını kontrol et
+        if embedding1.shape != embedding2.shape:
+            raise ValueError("Gömme vektörlerinin boyutları eşleşmiyor!")
+        
+        # Sıfır vektörlerine karşı korunma
+        norm1 = torch.linalg.norm(embedding1)
+        norm2 = torch.linalg.norm(embedding2)
+        
+        if norm1 == 0 or norm2 == 0:
+            return 0.0  # Sıfır vektörleri arasında anlamlı bir benzerlik hesaplanamaz
+        
+        # Kosinüs benzerliği hesaplama
+        dot_product = torch.dot(embedding1, embedding2)
+        norms_product = norm1 * norm2
+        similarity = dot_product / norms_product
+        
+        return similarity.item()  # GPU'dan CPU'ya taşı ve Python float'a dönüştür
+        
+    else:
+        # CPU ile hesaplama - orijinal numpy kodu
+        # Gömme vektörlerini numpy dizilerine dönüştür
+        if not isinstance(embedding1, np.ndarray):
+            embedding1 = np.array(embedding1)
+        if not isinstance(embedding2, np.ndarray):
+            embedding2 = np.array(embedding2)
+        
+        # Vektörlerin boyutlarını kontrol et
+        if embedding1.shape != embedding2.shape:
+            raise ValueError("Gömme vektörlerinin boyutları eşleşmiyor!")
+        
+        # Sıfır vektörlerine karşı korunma
+        norm1 = np.linalg.norm(embedding1)
+        norm2 = np.linalg.norm(embedding2)
+        
+        if norm1 == 0 or norm2 == 0:
+            return 0.0  # Sıfır vektörleri arasında anlamlı bir benzerlik hesaplanamaz
+        
+        # Kosinüs benzerliği hesaplama formülü: cos(θ) = (A·B) / (||A|| * ||B||)
+        dot_product = np.dot(embedding1, embedding2)
+        norms_product = norm1 * norm2
+        similarity = dot_product / norms_product
+        
+        return similarity
 
 def eliminate_element_embeddings(element: Dict) -> Dict:
     """
@@ -62,13 +106,14 @@ def eliminate_element_embeddings(element: Dict) -> Dict:
     return element_copy
     
 
-def calculate_and_save_similarity_scores(embeddings: List[Dict], save_prefix: str):
+def calculate_and_save_similarity_scores(embeddings: List[Dict], save_prefix: str, device='auto'):
     """
     Verilen gömme vektörlerinin benzerlik skorlarını hesaplar.
     
     Args:
         embeddings: Gömme vektörlerini içeren liste (sözlükler)
         save_prefix: Kaydedilecek dosya adının öneki
+        device: Hesaplama için kullanılacak cihaz ('auto', 'cpu', 'gpu')
     """
     # Toplam hesaplanacak benzerlik sayısı
     embed_len = len(embeddings)
@@ -102,7 +147,7 @@ def calculate_and_save_similarity_scores(embeddings: List[Dict], save_prefix: st
             eliminated_lower_element = eliminate_element_embeddings(lower_element)
             
             # Benzerlik skorunu hesapla
-            similarity_score = get_cosine_similarity(question_embedding, answer_embedding)
+            similarity_score = get_cosine_similarity(question_embedding, answer_embedding, device)
             
             # Skoru dosyaya ekle
             append_probability(save_prefix, eliminated_upper_element, eliminated_lower_element, similarity_score)
