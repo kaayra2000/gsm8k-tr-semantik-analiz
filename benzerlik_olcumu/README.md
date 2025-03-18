@@ -1,170 +1,179 @@
-# Hesaplamalı Anlambilim - Semantik Benzerlik Analizi
+# GSM8K TR Semantik Benzerlik Analizi
 
-Bu proje, Türkçe soru-cevap çiftleri arasındaki semantik benzerliği farklı dil modellerini kullanarak analiz eder. Üst dizindeki `gsm8k_tr_1000_soru_cevap.csv` veri kümesini kullanarak sorulara en benzer cevapları ve cevaplara en benzer soruları bulup modellerin performansını değerlendirir.
+Bu klsör, farklı dil modellerinin metin gömme (embedding) performansını karşılaştırmak için geliştirilmiş bir araçtır. Soru-cevap veri kümeleri üzerinde çeşitli transformers modellerinin gömme performansını değerlendirmeye yarar.
 
-## Proje Amacı
+## 📋 İçerik
 
-- Sorulara en yakın 5 cevabı bularak modelin top1 ve top5 başarısını ölçmek
-- Cevaplara en yakın 5 soruyu bularak modelin top1 ve top5 başarısını ölçmek
-- Metin gömmelerini t-SNE ile görselleştirmek
-- Farklı dil modellerinin semantik benzerlik performansını karşılaştırmak
+- [Genel Bakış](#genel-bakış)
+- [Gereksinimler](#gereksinimler)
+- [Kurulum](#kurulum)
+- [Kullanım](#kullanım)
+- [Proje Yapısı](#proje-yapısı)
+- [Sonuçların Yorumlanması](#sonuçların-yorumlanması)
 
-## Kullanılan Modeller
+## 🔍 Genel Bakış
 
-Varsayılan olarak aşağıdaki modeller kullanılmıştır:
+Bu proje, farklı dil modellerinin (özellikle çok dilli modellerin) Türkçe metinlerde gömme vektörlerini ne kadar iyi oluşturduğunu karşılaştırmayı amaçlar. Soru ve cevaplar arasındaki kosinüs benzerliğini hesaplayarak, bir sorunun doğru cevapla eşleştirilme başarısını ölçer.
+
+Proje şu ana bileşenleri içerir:
+- Metin gömme hesaplama
+- t-SNE ile boyut indirgeme ve görselleştirme
+- Kosinüs benzerliği hesaplama
+- Top-1 ve Top-5 doğruluk skorları değerlendirme
+
+## 📦 Gereksinimler
+
+Projenin çalışması için aşağıdaki kütüphanelere ihtiyaç vardır:
+
+```bash
+transformers
+pandas
+scikit-learn
+torch
+matplotlib
+```
+
+
+## 🚀 Kurulum
+
+### 1. Projeyi indirin
+
+```bash
+git clone https://github.com/kaayra2000/gsm8k-tr-semantik-analiz.git
+cd gsm8k-tr-semantik-analiz
+```
+
+### 2. Sanal ortam oluşturun (isteğe bağlı ama önerilir)
+  
+```bash
+python3 -m venv .venv
+```
+
+### 3. Sanal ortamı etkinleştirin
+
+Windows için:
+
+```bash
+.venv\Scripts\activate
+```
+
+Linux için:
+
+```bash
+source .venv/bin/activate
+```
+
+
+### 4. Gereksinimleri yükleyin
+
+```bash
+pip install -r gereksinimler.txt
+```
+
+
+## 💻 Kullanım
+
+Projeyi çalıştırmak için iki yöntem vardır:
+
+### 1. Jupyter Notebook Kullanımı (Önerilen)
+
+`main.ipynb` dosyasını Jupyter Notebook veya JupyterLab ile açın ve adım adım çalıştırın:
+
+```bash
+jupyter notebook main.ipynb
+```
+
+### 2. Colab Kullanımı
+
+`main.ipynb` dosyasını Google Colab üzerinde açın ve adım adım çalıştırın.
+
+
+## 📊 Veri Akışı
+
+Proje aşağıdaki adımları takip eder:
+
+1. **Model ve Veri Yükleme**: 
+    - Türkçe metinlerde gömme vektörleri oluşturmak için farklı dil modelleri yüklenir.
+    - GSM8K veri kümesi yüklenir.
+
+
+2. **Gömme Vektörlerinin Hesaplanması**:
+    - Soru ve cevaplar için gömme vektörleri oluşturulur.
+
+
+3. **t-SNE ile Görselleştirme**:
+    - Gömme vektörleri t-SNE ile 2 boyuta indirgenir ve görselleştirilir.
+
+
+4. **Benzerlik Skorlarının Hesaplanması**:
+    - Soru ve cevaplar arasındaki kosinüs benzerliği hesaplanır.
+
+
+5. **Top-1 ve Top-5 Sonuçlarının Hesaplanması**: 
+    - Her soru için en yakın cevapların doğruluğu hesaplanır.
+
+6. **Sonuçların Görselleştirilmesi**:
+    - Benzerlik skorları ve doğruluk sonuçları görselleştirilir.
+
+## 📂 Proje Yapısı
+
+Proje aşağıdaki dosya ve klasörlerden oluşur:
+
+- `main.ipynb`: Ana çalışma akışı
+- `gomme_islemleri.py`: Gömme hesaplama işlemleri
+- `benzerlik_islemleri.py`: Benzerlik hesaplama işlemleri
+- `dosya_islemleri.py`: Dosya işleme yardımcıları
+- `top_islemleri.py`: Top-1 ve Top-5 hesaplama
+- `gorsellestir.py`: Görselleştirme işlevleri
+- `gereksinimler.txt`: Gerekli kütüphaneler
+- `.gitignore`: Git tarafından yok sayılacak dosyalar
+
+## 📊 Sonuç Klasörleri
+
+Proje çalıştırıldığında, aşağıdaki klasörler otomatik olarak oluşturulur:
+
+- `embeddings/`: Hesaplanan gömme vektörleri
+- `tsne_results/`: t-SNE görselleştirme sonuçları
+- `probabilities/`: Benzerlik skorları
+- `top1_top5_results/`: Top-1 ve Top-5 sonuçları
+
+## 🔄 Test Edilen Modeller
+
+Projede varsayılan olarak aşağıdaki modeller test edilir:
 
 1. `intfloat/multilingual-e5-base` (278M parametre)
-2. `intfloat/multilingual-e5-small` (118M parametre)
-3. `ibm-granite/granite-embedding-107m-multilingual` (107M parametre)
+2. `ibm-granite/granite-embedding-107m-multilingual` (107M parametre)
+3. `intfloat/multilingual-e5-small` (118M parametre)
 4. `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` (118M parametre)
 5. `shibing624/text2vec-base-multilingual` (118M parametre)
 6. `ytu-ce-cosmos/turkish-colbert`
 
-Eğer farklı modeller kullanmak isterseniz, `main.py` dosyasındaki `model_names` değişkenini güncelleyebilirsiniz.
+## 📝 Sonuçların Yorumlanması
 
-## Dosya Yapısı
+- **t-SNE Görselleri**: Gömme vektörlerinin 2 boyutlu gösterimini sağlar. Benzer soru-cevap çiftlerinin uzayda birbirine yakın olması beklenir.
+  
+- **Top-1 Skor**: Bir sorunun/cevabın, doğru eşiyle en yüksek benzerliğe sahip olma yüzdesi. Bu skor yükseldikçe model performansı iyileşir.
 
-### Ana Dosyalar
+- **Top-5 Skor**: Bir sorunun/cevabın, doğru eşinin ilk 5 en benzer sonuç içinde yer alma yüzdesi.
 
-- `main.py`: Tüm işlemi koordine eden ana script
-- `gomme_islemleri.py`: Metin gömmelerine ve t-SNE dönüşümüne ilişkin fonksiyonlar
-- `benzerlik_islemleri.py`: Metin benzerliği hesaplama fonksiyonları
-- `basari_hesapla.py`: Top1 ve Top5 başarı ölçümlerine ilişkin fonksiyonlar
-- `gorsellestir.py`: Sonuçları görselleştirme fonksiyonları
-- `dosya_islemleri.py`: Dosya yükleme/kaydetme işlemleri için yardımcı fonksiyonlar
-- `gereksinimler.txt`: Gerekli Python paketlerinin listesi
+## ⚠️ Notlar
 
-## Dosya İçerikleri ve Fonksiyonları
+- Büyük veri kümeleriyle çalışırken GPU kullanımı önerilir.
+- Varsayılan olarak veri kümesindeki ilk 70 örnek kullanılır. Bu değeri `dosya_islemleri.py` dosyasından değiştirebilirsiniz.
+- t-SNE parametreleri `gomme_islemleri.py` dosyasından ayarlanabilir.
 
-### `main.py`
-Ana çalıştırma dosyasıdır. Tüm modeller için benzerlik hesaplama, değerlendirme ve görselleştirme işlemlerini koordine eder.
+## 🤔 Sorun Giderme
 
-Önemli fonksiyonlar:
-- `generate_similarity_json()`: Kaynak metinle hedef metinler arasındaki benzerliği hesaplar
-- `main()`: Ana yürütme fonksiyonu, tüm işlem akışını kontrol eder
+1. **Bellek Hatası Alıyorsanız**:
+   - Veri kümesinin boyutunu azaltın
+   - Daha küçük batch_size kullanın
+   - Daha küçük modeller seçin
 
-### `gomme_islemleri.py` 
-Metinlerin gömme vektörlerini hesaplar ve t-SNE uygulamasını gerçekleştirir.
+2. **CUDA Hatası Alıyorsanız**:
+   - `device_type="cpu"` ayarını kullanın
 
-Önemli fonksiyonlar:
-- `get_token_embeddings()`: Verilen metni tokenize eder ve her token için gömme vektörlerini çıkarır
-- `apply_tsne()`: Gömme vektörlerini 2 boyuta indirgeyerek görselleştirmeye hazırlar
+3. **Dosya Bulunamadı Hatası**:
+   - Doğru çalışma dizininde olduğunuzdan emin olun
+   - Veri kümesi dosyasının doğru konumda olduğunu kontrol edin
 
-### `benzerlik_islemleri.py`
-Metinler arasındaki benzerlik hesaplamalarını yapar.
-
-Önemli fonksiyonlar:
-- `get_cosine_similarity()`: İki gömme vektörü arasındaki kosinüs benzerliğini hesaplar
-- `find_top5_similar()`: Verilen metne en benzer 5 metni bulur
-
-### `basari_hesapla.py`
-Modellerin top1 ve top5 başarı metriklerini hesaplar.
-
-Önemli fonksiyonlar:
-- `evaluate_similarity_results_top1_top5()`: Benzerlik sonuçlarının doğruluğunu değerlendirir
-
-### `gorsellestir.py`
-Sonuçları görsel olarak sunmaya yarar.
-
-Önemli fonksiyonlar:
-- `plot_two_tsne_results()`: İki metin kümesinin t-SNE dönüşümlerini görselleştirir
-- `visualize_top1_top5_scores()`: Tüm modellerin top1 ve top5 skorlarını çubuk grafik olarak gösterir
-
-### `dosya_islemleri.py`
-Dosya yükleme, kaydetme ve dönüştürme işlemlerini gerçekleştirir.
-
-Önemli fonksiyonlar:
-- `load_dataset()`: CSV veri setini yükler
-- `load_model()`: HuggingFace modellerini yükler
-- `save_smilarity_json()`: Benzerlik sonuçlarını JSON formatında kaydeder
-- `save_top1_top5_results_json()`: Top1/Top5 değerlendirme sonuçlarını kaydeder
-- `get_all_top1_top5_results()`: Tüm modellerin sonuçlarını yükleme işlemini gerçekleştirir
-
-## Kurulum ve Çalıştırma
-
-### Gereksinimler
-
-Aşağıdaki paketlerin yüklü olması gerekmektedir:
-```bash
-pip install -r gereksinimler.txt
-```
-Temel gereksinimler:
-* transformers
-* torch
-* numpy
-* pandas
-* scikit-learn
-* matplotlib
-
-### Veri Kümesi
-
-Kök dizinde `gsm8k_tr_1000_soru_cevap.csv` dosyasının bulunduğundan emin olun. Bu dosya, 1000 adet Türkçe soru-cevap çiftini içermelidir.
-
-### Çalıştırma
-
-Proje klasöründe aşağıdaki komutu çalıştırın:
-
-```bash
-python main.py
-```
-### Çıktılar
-
-#### Benzerlik Sonuçları
-
-Her model için soru-cevap ve cevap-soru yönünde benzerlik hesaplamaları JSON formatında `similarity_results/` dizinine kaydedilir. Bu dosyalar aşağıdaki yapıda bilgiler içerir:
-```json
-{
-  "0": {
-    "source_text": "...",
-    "real_target": "...",
-    "top5_texts": ["...", "...", ...],
-    "source_text_tsne_embedding": [...],
-    "top5_matches": [
-      {
-        "rank": 1,
-        "index": 5,
-        "text": "...",
-        "score": 0.92,
-        "tsne_embedding": [...]
-      },
-      ...
-    ]
-  },
-  ...
-}
-```
-
-#### Top1 ve Top5 Sonuçları
-
-Her model için top1 ve top5 başarı metrikleri `top1_top5_results/` dizinine kaydedilir:
-
-```json
-{
-  "model_name": "intfloat/multilingual-e5-small",
-  "result_type": "question_to_answer",
-  "top1_score": {
-    "correct": 3,
-    "total": 5,
-    "accuracy": 0.6,
-    "correct_items": [0, 1, 4]
-  },
-  "top5_score": {
-    "correct": 5,
-    "total": 5,
-    "accuracy": 1.0,
-    "correct_items": [[0, 1], [1, 1], [2, 3], [3, 2], [4, 1]]
-  }
-}
-```
-
-#### Görselleştirmeler
-
-**t-SNE Görselleştirmeleri**
-
-Her model için soru ve cevap gömmelerinin 2 boyutlu gösterimi `similarity_results/gorseller/` dizininde saklanır. Bu görseller, soru ve cevap vektörlerinin semantik uzaydaki dağılımını gösterir.
-
-**Top1 ve Top5 Çubuk Grafikleri**
-Tüm modellerin top1 ve top5 başarılarını gösteren çubuk grafikler `top1_top5_results/gorseller/` dizininde saklanır:
-
-* top1_top5_results_question_to_answer.png: Soru->Cevap yönündeki başarıları gösterir
-* top1_top5_results_answer_to_question.png: Cevap->Soru yönündeki başarıları gösterir
+Bu README, projenin nasıl kullanılacağını ve işleyişini açıklamaktadır. Sorularınız veya sorunlarınız için iletişime geçmekten çekinmeyin.
