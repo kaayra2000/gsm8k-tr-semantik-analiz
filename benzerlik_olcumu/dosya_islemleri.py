@@ -184,33 +184,7 @@ def read_probability_from_file(prefix: str) -> list:
     # Dosya yolu
     file_path = get_probabilities_dir(prefix)
     
-    # Dosya var mı diye kontrol et
-    if not os.path.exists(file_path):
-        print(f"Dosya bulunamadı: {file_path}")
-        return []
-    
-    # Tüm olasılıkları oku
-    probabilities = []
-    with open(file_path, 'r', encoding='utf-8') as f:
-        line_num = 0
-        for line in f:
-            line_num += 1
-            # Boş satırları atla
-            line = line.strip()
-            if not line:
-                continue
-                
-            # Satırın sonundaki virgülü kaldır
-            if line.endswith(','):
-                line = line[:-1]
-                
-            # JSON nesnesini ayrıştır
-            try:
-                probability_obj = json.loads(line)
-                probabilities.append(probability_obj)
-            except json.JSONDecodeError as e:
-                print(f"Satır {line_num} işlenemedi: {e}")
-                continue
+    probabilities = read_jsonlist_from_file(file_path)
     
     print(f"{os.path.basename(file_path)} dosyasından {len(probabilities)} olasılık vektörü yüklendi.")
     return probabilities
@@ -225,61 +199,8 @@ def read_top1_top5_results_json(prefix: str, is_question_to_answer: bool) -> Dic
     Returns:
         Dict: Okunan JSON verisi
     """
-    file_name = get_top1_top5_result_file_name(prefix, is_question_to_answer)
-    file_path = os.path.join(top1_top5_results_dir, file_name)
-    if not os.path.exists(file_path):
-        return {}
-    with open(file_path, 'r') as f:
-        data = json.load(f)
-    return data
-
-def get_similarity_json_file_name(prefix: str, is_question_to_answer: bool) -> str:
-    """
-    Benzerlik sonuçlarının kaydedileceği JSON dosyasının adını döndüren fonksiyon.
-
-    Args:
-        prefix: Model adının yer aldığı dosya adı öneki
-        is_question_to_answer: Soru-cevap benzerliği mi yoksa cevap-soru benzerliği mi olduğu
-
-    Returns:
-        str: JSON dosyasının adı
-    """
-    return f"{prefix}_{get_result_infix(is_question_to_answer)}_similarity.json"
-def read_similarity_json(prefix: str, is_question_to_answer: bool) -> Dict:
-    """
-    JSON dosyasından benzerlik verisini okuyan fonksiyon.
-
-    Args:
-        prefix: Model adının yer aldığı dosya adı öneki
-        is_question_to_answer: Soru-cevap benzerliği mi yoksa cevap-soru benzerliği mi olduğu
-    
-    Returns:
-        Dict: Okunan JSON verisi
-    """
-    file_name = get_similarity_json_file_name(prefix, is_question_to_answer)
-
-    file_path = os.path.join(similarity_results_dir, file_name)
-    if not os.path.exists(file_path):
-        return {}
-    with open(file_name, 'r') as f:
-        data = json.load(f)
-    return data
-
-def save_smilarity_json(data: Dict, prefix: str, is_question_to_answer: bool):
-    """
-    Verilen veriyi JSON formatında kaydeden fonksiyon.
-
-    Args:
-        data: Kaydedilecek veri
-        prefix: Model adının yer aldığı dosya adı öneki
-        is_question_to_answer: Soru-cevap benzerliği mi yoksa cevap-soru benzerliği mi olduğu
-    """
-    if not os.path.exists(similarity_results_dir):
-        os.makedirs(similarity_results_dir)
-    file_name = get_similarity_json_file_name(prefix, is_question_to_answer)
-    file_path = os.path.join(similarity_results_dir, file_name)
-    with open(file_path, 'w') as f:
-         json.dump(data, f, ensure_ascii=False, indent=4)
+    file_path = get_top1_top5_results_file_path(prefix, is_question_to_answer)
+    return read_jsonlist_from_file(file_path)
 
 
 def load_model(model_name: str, device_type: str = "cuda") -> Tuple[AutoModel, AutoTokenizer]:
@@ -322,7 +243,6 @@ def load_dataset() -> pd.DataFrame:
     df['question'] = df['question'].apply(tr_to_lower)
     df['answer'] = df['answer'].apply(tr_to_lower)
     df["index"] = range(0, len(df))  # 1'den başlayarak her satıra sırayla numara ver
-    df = df.head(10)
     return df
 
 def get_embeddings_path(save_prefix: str) -> str:
@@ -389,6 +309,45 @@ def append_embedding(save_prefix: str, item: pd.Series, question_embedding: 'np.
     }
     
     append_json(json_path, json_object)
+
+def read_jsonlist_from_file(file_path: str) -> list:
+    """
+    JSON formatında kaydedilmiş bir dosyadaki tüm nesneleri okuyan fonksiyon.
+    
+    Args:
+        file_path: Okunacak dosyanın yolu
+    
+    Returns:
+        list: Okunan JSON nesneleri
+    """
+    # Check if file exists
+    if not os.path.exists(file_path):
+        print(f"Dosya bulunamadı: {file_path}")
+        return []
+    
+    json_list = []
+    # tüm kayıtları oku
+    with open(file_path, 'r', encoding='utf-8') as f:
+        line_num = 0
+        for line in f:
+            line_num += 1
+            # Boş satırları atla
+            line = line.strip()
+            if not line:
+                continue
+                
+            # Sondaki virgülü kaldır
+            if line.endswith(','):
+                line = line[:-1]
+                
+            # JSON nesnesini ayrıştır
+            try:
+                json_obj = json.loads(line)
+                json_list.append(json_obj)
+            except json.JSONDecodeError as e:
+                print(f"Satır {line_num} işlenemedi: {e}")
+                continue
+    return json_list
 
 def read_embedding_from_file(save_prefix: str) -> list:
     """
@@ -496,29 +455,3 @@ def save_tsne_json(data: Dict, save_prefix: str):
     # Write the data to the file
     with open(json_path, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
-
-def load_tsne_json(save_prefix: str) -> Dict:
-    """
-    JSON formatında kaydedilmiş t-SNE sonuçlarını okuyan fonksiyon.
-    
-    Args:
-        save_prefix: Kaydedilen dosya adının öneki
-
-    Returns:
-
-        Dict: Okunan t-SNE sonuçları
-    """
-    # Get the file path
-    json_path = get_tsne_file_path(save_prefix)
-    
-    # Check if file exists
-    if not os.path.exists(json_path):
-        print(f"Dosya bulunamadı: {json_path}")
-        return {}
-    
-    # Read the JSON file
-    with open(json_path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-    
-    print(f"{os.path.basename(json_path)} dosyasından t-SNE sonuçları yüklendi.")
-    return data
