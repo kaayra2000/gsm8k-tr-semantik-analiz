@@ -130,7 +130,7 @@ def tsne_sonuc_olustur(veri: list, save_prefix: str) -> dict:
     save_tsne_json(tsne_sonuc, save_prefix)
     return tsne_sonuc
 
-def get_multi_token_embeddings(model: AutoModel, tokenizer: AutoTokenizer, text: str) -> np.ndarray:
+def get_multi_token_embeddings(model: AutoModel, tokenizer: AutoTokenizer, text: str, device_type: str = "cuda") -> np.ndarray:
     """
     Verilen metnin token gömmelerini matris olarak döndüren fonksiyon.
     Her satır bir tokene, her sütun bir gömme boyutuna karşılık gelir.
@@ -139,13 +139,15 @@ def get_multi_token_embeddings(model: AutoModel, tokenizer: AutoTokenizer, text:
         model: Hugging Face model
         tokenizer: Hugging Face tokenizer
         text: Gömüsü alınacak metin
+        device_type: Hesaplamanın yapılacağı cihaz tipi ("cuda" veya "cpu")
     
     Returns:
         np.ndarray: Token gömmeleri matrisi (token_sayısı x gömme_boyutu)
     """
     # Metni tokenize et
     inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=4096, padding=True)
-    
+    inputs = {k: v.to(device_type) for k, v in inputs.items()}
+
     with torch.no_grad():
         outputs = model(**inputs)
     
