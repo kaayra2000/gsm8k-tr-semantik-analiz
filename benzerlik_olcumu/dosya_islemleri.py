@@ -56,21 +56,45 @@ def get_top1_top5_result_file_name(prefix: str, is_question_to_answer: bool) -> 
         str: JSON dosyasının adı
     """
     return f"{prefix}_{get_result_infix(is_question_to_answer)}_top1_top5_results.json"
-def save_top1_top5_results_json(data: Dict, prefix: str, is_question_to_answer: bool):
+def get_top1_top5_results_file_path(prefix: str, is_question_to_answer: bool) -> str:
     """
-    Verilen veriyi JSON formatında kaydeden fonksiyon.
-    
+    Top1 ve top5 sonuçlarının kaydedileceği JSON dosyasının yolunu döndüren fonksiyon.
+
     Args:
-        data: Kaydedilecek veri
         prefix: Model adının yer aldığı dosya adı öneki
-        is_question_to_answer: Soru-ceva benzerliği mi yoksa cevap-soru benzerliği mi olduğu
+        is_question_to_answer: Soru-cevap benzerliği mi yoksa cevap-soru benzerliği mi olduğu
+
+    Returns:
+        str: JSON dosyasının yolu
     """
-    if not os.path.exists(top1_top5_results_dir):
-        os.makedirs(top1_top5_results_dir)
     file_name = get_top1_top5_result_file_name(prefix, is_question_to_answer)
-    file_path = os.path.join(top1_top5_results_dir, file_name)
-    with open(file_path, 'w') as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
+    return os.path.join(top1_top5_results_dir, file_name)
+def get_calculated_top5_results_size(prefix: str, is_question_to_answer: bool) -> int:
+    """
+    prefix'e göre kaydedilen top1 ve top5 sonuçlarının sayısını döndüren fonksiyon.
+
+    Args:
+        prefix: Kaydedilecek dosya adının öneki
+        is_question_to_answer: Soru-cevap benzerliği mi yoksa cevap-soru benzerliği mi olduğu
+
+    Returns:
+        int: Dosyada şimdiye kadar kaç top1 ve top5 sonucu kaydedildiği
+    """
+    file_path = get_top1_top5_results_file_path(prefix, is_question_to_answer)
+    return get_json_size(file_path)
+def append_top1_top5_results_json(prefix: str, is_question_to_answer: bool, top1_top5_results: Dict):
+    """
+    Top1 ve top5 sonuçlarını JSON formatında kaydeden fonksiyon.
+
+    Args:
+        prefix: Model adının yer aldığı dosya adı öneki
+        is_question_to_answer: Soru-cevap benzerliği mi yoksa cevap-soru benzerliği mi olduğu
+        top1_top5_results: Kaydedilecek top1 ve top5 sonuçları
+    """    
+    # Dosya yolunu al
+    file_path = get_top1_top5_results_file_path(prefix, is_question_to_answer)
+    
+    append_json(file_path, top1_top5_results)
 def get_all_top1_top5_results() -> List[Dict]:
     """
     Tüm top1 ve top5 sonuçlarını okuyan fonksiyon.
@@ -110,7 +134,7 @@ def get_calculated_probabilities_size(prefix: str) -> int:
     file_path = get_probabilities_dir(prefix)
     return get_json_size(file_path)
 
-def append_probability(prefix: str, index1: int, index2: int, probability: float,
+def append_probability(prefix: str, source: int, target: int, probability: float,
                        source_dest_type: str = "question_to_answer"):
     """
     Bir olasılık vektörünü ve ilgili veriyi JSON formatında dosyaya ekleyen fonksiyon.
@@ -118,30 +142,33 @@ def append_probability(prefix: str, index1: int, index2: int, probability: float
     
     Args:
         prefix: Kaydedilecek dosya adının öneki
-        item: Kaydedilecek pandas Series nesnesi (soru ve cevap içeren)
-        probabilities: Olasılık vektörü
+        source: Kaynak verinin indeksi
+        target: Hedef verinin indeksi
+        probability: İki veri arasındaki olasılık
+        source_dest_type: Kaynak ve hedef veri türü (soru-cevap benzerliği mi yoksa cevap-soru benzerliği mi olduğu)
     """
-    # Eğer dosya yoksa oluştur
-    if not os.path.exists(probabilities_dir):
-        os.makedirs(probabilities_dir)
-    
     # Dosya yolu
     file_path = get_probabilities_dir(prefix)
 
     # JSON objesi oluştur
     json_object = {
-        "index1": index1,
-        "index2": index2,
+        "source": source,
+        "target": target,
         "probability": probability,
         "source_dest_type": source_dest_type
     }
 
     # Dosyayı aç ve yeni girişi ekle
     append_json(file_path, json_object)
-def append_json(file_path: str, json_object: Dict):
+
+def append_json(file_path, json_object):
+    # Dosya yolunun var olup olmadığını kontrol et
+    if not os.path.exists(os.path.dirname(file_path)):
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    
     file_exists = os.path.exists(file_path) and os.path.getsize(file_path) > 0
     with open(file_path, 'a' if file_exists else 'w', encoding='utf-8') as f:
-        # Write the JSON object and a comma on a single line
+        # JSON nesnesini ve bir virgülü tek bir satıra yaz
         f.write(json.dumps(json_object, ensure_ascii=False))
         f.write(',\n')
 def read_probability_from_file(prefix: str) -> list:
@@ -348,10 +375,6 @@ def append_embedding(save_prefix: str, item: pd.Series, question_embedding: 'np.
         question_embedding: Soru gömme vektörü
         answer_embedding: Cevap gömme vektörü
     """
-    
-    # Create directory if it doesn't exist
-    if not os.path.exists(embeddings_dir):
-        os.makedirs(embeddings_dir)
         
     # Get the file path with json extension
     json_path = get_embeddings_path(save_prefix)

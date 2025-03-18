@@ -71,8 +71,6 @@ def plot_two_tsne_results(tsne_result1, tsne_result2, save_prefix,
         os.makedirs(os.path.dirname(file_path))
     plt.savefig(file_path, dpi=300, bbox_inches='tight')
 
-    return plt
-
 def visualize_top1_top5_scores(results_list: List) -> None:
     """
     Model sonuçlarını içeren sözlük listesini alıp top1 ve top5 skorlarını 
