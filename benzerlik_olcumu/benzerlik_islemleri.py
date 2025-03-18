@@ -10,7 +10,7 @@ def get_cosine_similarity(embedding1, embedding2, device='auto') -> float:
     Args:
         embedding1: İlk gömme vektörü (liste veya numpy dizisi)
         embedding2: İkinci gömme vektörü (liste veya numpy dizisi)
-        device: Hesaplama için kullanılacak cihaz ('auto', 'cpu', 'gpu')
+        device: Hesaplama için kullanılacak cihaz ('auto', 'cpu', 'cuda')
                'auto' değeri mevcutsa GPU kullanacaktır
         
     Returns:
@@ -19,14 +19,14 @@ def get_cosine_similarity(embedding1, embedding2, device='auto') -> float:
     
     # GPU kullanılabilirlik kontrolü
     use_gpu = False
-    if device == 'auto' or device == 'gpu':
+    if device == 'auto' or device == 'cuda':
         try:
             if torch.cuda.is_available():
                 use_gpu = True
-            elif device == 'gpu':
+            elif device == 'cuda':
                 print("GPU istenildi ancak kullanılamıyor. CPU kullanılacak.")
         except ImportError:
-            if device == 'gpu':
+            if device == 'cuda':
                 print("PyTorch yüklü değil. GPU kullanılamıyor. CPU kullanılacak.")
     
     if use_gpu:
@@ -113,7 +113,7 @@ def calculate_and_save_similarity_scores(embeddings: List[Dict], save_prefix: st
     Args:
         embeddings: Gömme vektörlerini içeren liste (sözlükler)
         save_prefix: Kaydedilecek dosya adının öneki
-        device: Hesaplama için kullanılacak cihaz ('auto', 'cpu', 'gpu')
+        device: Hesaplama için kullanılacak cihaz ('auto', 'cpu', 'cuda')
     """
     # Toplam hesaplanacak benzerlik sayısı
     embed_len = len(embeddings)
