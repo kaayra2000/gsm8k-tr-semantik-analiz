@@ -109,6 +109,7 @@ def plot_two_tsne_results(tsne_result1, tsne_result2, save_prefix, idx: int,
         title: Grafik başlığı
         figsize: Figür boyutu (genişlik, yükseklik)
     """
+    font_size = 25
     # Liste tipindeki verileri NumPy dizisine dönüştür
     tsne_result1 = np.array(tsne_result1)
     tsne_result2 = np.array(tsne_result2)
@@ -137,18 +138,18 @@ def plot_two_tsne_results(tsne_result1, tsne_result2, save_prefix, idx: int,
     )
     
     # Sol grafik düzenlemeleri
-    ax1.set_title(f"{label1} Token Gömmeleri", fontsize=14)
-    ax1.set_xlabel("t-SNE Boyut 1", fontsize=12)
-    ax1.set_ylabel("t-SNE Boyut 2", fontsize=12)
+    ax1.set_title(f"{label1} Token Gömmeleri", fontsize=font_size)
+    ax1.set_xlabel("t-SNE Boyut 1", fontsize=font_size)
+    ax1.set_ylabel("t-SNE Boyut 2", fontsize=font_size)
     ax1.grid(True, linestyle='--', alpha=0.5)
     
     # Sağ grafik düzenlemeleri
-    ax2.set_title(f"{label2} Token Gömmeleri", fontsize=14)
-    ax2.set_xlabel("t-SNE Boyut 1", fontsize=12)
-    ax2.set_ylabel("t-SNE Boyut 2", fontsize=12)
+    ax2.set_title(f"{label2} Token Gömmeleri", fontsize=font_size)
+    ax2.set_xlabel("t-SNE Boyut 1", fontsize=font_size)
+    ax2.set_ylabel("t-SNE Boyut 2", fontsize=font_size)
     ax2.grid(True, linestyle='--', alpha=0.5)
     
-    fig.suptitle(title, fontsize=16)
+    fig.suptitle(title, fontsize=font_size + 3)
     
     # Grafiği düzenle ve kaydet
     plt.tight_layout()
@@ -216,7 +217,7 @@ def save_tsne_png(data: Dict, save_prefix: str, title: str, q_color='blue', a_co
             plt.scatter(a_x, a_y, color=a_color, marker='s', label='Cevaplar')
     
     # Etiketler ve açıklamaları ekle
-    plt.title(title)
+    plt.title(title, fontsize=18)
     plt.legend()
     plt.grid(True, alpha=0.3)
     
