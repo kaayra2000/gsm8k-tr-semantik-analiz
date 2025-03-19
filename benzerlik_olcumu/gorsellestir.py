@@ -161,13 +161,14 @@ def plot_two_tsne_results(tsne_result1, tsne_result2, save_prefix, idx: int,
     plt.close()
 
 
-def save_tsne_png(data: Dict, save_prefix: str, q_color='blue', a_color='yellow'):
+def save_tsne_png(data: Dict, save_prefix: str, title: str, q_color='blue', a_color='yellow'):
     """
     t-SNE görselleştirme grafiği oluşturur ve kaydeder.
     
     Args:
         data: 'question_tsne' ve 'answer_tsne' noktalarını içeren sözlük
         save_prefix: Kaydedilen dosya için önek
+        title: Grafik başlığı
         q_color: Soru noktaları için renk (varsayılan: mavi)
         a_color: Cevap noktaları için renk (varsayılan: sarı)
     
@@ -215,7 +216,7 @@ def save_tsne_png(data: Dict, save_prefix: str, q_color='blue', a_color='yellow'
             plt.scatter(a_x, a_y, color=a_color, marker='s', label='Cevaplar')
     
     # Etiketler ve açıklamaları ekle
-    plt.title('t-SNE Görselleştirmesi')
+    plt.title(title)
     plt.legend()
     plt.grid(True, alpha=0.3)
     
