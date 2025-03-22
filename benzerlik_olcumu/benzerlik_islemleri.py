@@ -157,66 +157,75 @@ def calculate_and_save_similarity_scores(embeddings: List[Dict], save_prefix: st
 
 def get_single_top5_matches(data, source_index, is_question_to_answer):
     """
-    Belirli bir kaynak index için en benzer 5 hedefi döndürür.
-    
-    Parametreler:
-        data: Analiz edilecek veri kümesi
-        source_index: Kaynak öğenin indeksi
-        is_question_to_answer: Karşılaştırma yönünü belirten bayrak
+    Belirli bir kaynak için en yüksek 5 benzer eşleşmeyi döndürür.
+    Bu sürüm, probability değerini float'a çevirir ve tuple'a id(item) ekleyerek
+    sözlük karşılaştırma hatasını önler.
     """
-    
-    # Veriyi kaynak indeks ve türüne göre filtreleme
+    # Veri filtreleme: "source" ya da "target" alanı hem dictionary hem de int olabilir.
     if is_question_to_answer:
-        filtered_data = [item for item in data if item["source"]["index"] == source_index]
-        target = "target"
-        source_item = filtered_data[0]["source"]
+        filtered_data = [item for item in data if (item.get("source") if isinstance(item.get("source"), int) 
+                                                     else item.get("source", {}).get("index")) == source_index]
+        target_key = "target"
+        source_item = filtered_data[0]["source"] if isinstance(filtered_data[0]["source"], dict) else {"index": filtered_data[0]["source"], "question": ""}
     else:
-        filtered_data = [item for item in data if item["target"]["index"] == source_index]
-        source_item = filtered_data[0]["target"]
-        target = "source"
-
+        filtered_data = [item for item in data if (item.get("target") if isinstance(item.get("target"), int) 
+                                                     else item.get("target", {}).get("index")) == source_index]
+        target_key = "source"
+        source_item = filtered_data[0]["target"] if isinstance(filtered_data[0]["target"], dict) else {"index": filtered_data[0]["target"], "answer": ""}
     
-    # Eşleşme bulunamazsa None döndür
+    # Eğer eşleşme yoksa None döndür.
     if not filtered_data:
         return None
+
+    source_text = source_item.get("question") if is_question_to_answer else source_item.get("answer", "")
     
-    # Kaynak metni al
-    source_text = source_item["question"] if is_question_to_answer else source_item["answer"]
-    
-    # Min-heap kullanarak en yüksek 5 olasılığı izle
+    # Min-heap kullanarak en yüksek 5 olasılığı izleyelim.
+    # Her tuple'a (probability, id(item), item) ekleyerek, aynı probability durumunda
+    # benzersiz id değeri sayesinde karşılaştırma yapılır.
     top5_heap = []
-    
     for item in filtered_data:
-        probability = item["probability"]
+        try:
+            probability = float(item["probability"])
+        except (ValueError, TypeError):
+            probability = 0.0  # Çevrilemezse varsayılan olarak 0.0 kullan
         
-        # Eğer heap'te 5'ten az eleman varsa, direkt ekle
         if len(top5_heap) < 5:
-            heapq.heappush(top5_heap, (probability, item))
-        # Eğer yeni elemanın olasılığı heap'teki en küçük olasılıktan büyükse, yer değiştir
+            heapq.heappush(top5_heap, (probability, id(item), item))
         elif probability > top5_heap[0][0]:
-            heapq.heappushpop(top5_heap, (probability, item))
+            heapq.heappushpop(top5_heap, (probability, id(item), item))
     
     # Heap'i olasılığa göre azalan sırada sırala
-    top5 = [item for _, item in sorted(top5_heap, key=lambda x: x[0], reverse=True)]
+    top5 = [t[2] for t in sorted(top5_heap, key=lambda x: x[0], reverse=True)]
     
-    # İlk indeks ve olasılığı çıkar
-    first_index = top5[0][target]["index"] if top5 else None
-    first_probability = top5[0]["probability"] if top5 else None
+    if top5:
+        if isinstance(top5[0].get(target_key), dict):
+            first_index = top5[0][target_key].get("index")
+        else:
+            first_index = top5[0].get(target_key)
+        first_probability = float(top5[0]["probability"])
+    else:
+        first_index = None
+        first_probability = None
+
+    # Top5 indekslerini çıkar
+    top5_indexs = []
+    for item in top5:
+        if isinstance(item.get(target_key), dict):
+            top5_indexs.append(item[target_key].get("index"))
+        else:
+            top5_indexs.append(item.get(target_key))
     
-    # top5_indexs için indeksleri çıkar
-    top5_indexs = [item[target]["index"] for item in top5]
-    
-    # top5_results oluştur
+    # Top5 sonuçlarını oluştur
     top5_results = [
         {
             "rank": i,
-            "index": item[target]["index"],
-            "probability": item["probability"],
-            "dest_text": item[target]["answer"] if is_question_to_answer else item[target]["question"]
+            "index": item[target_key].get("index") if isinstance(item.get(target_key), dict) else item.get(target_key),
+            "probability": float(item["probability"]),
+            "dest_text": item[target_key].get("answer") if (is_question_to_answer and isinstance(item.get(target_key), dict)) 
+                         else (item[target_key] if isinstance(item.get(target_key), str) else "")
         } for i, item in enumerate(top5)
     ]
     
-    # Sonuç sözlüğünü oluştur
     result = {
         "source_index": source_index,
         "source_text": source_text,
@@ -228,6 +237,7 @@ def get_single_top5_matches(data, source_index, is_question_to_answer):
     }
     
     return result
+
 
 def get_and_save_all_top5_matches(data, save_prefix: str):
     """
